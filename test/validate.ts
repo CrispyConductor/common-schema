@@ -93,7 +93,7 @@ describe('#validate', function() {
 					]
 				}
 			]
-		})).to.equal(true);
+		})).to.equal(undefined);
 	});
 
 	it('invalid', function() {
@@ -101,68 +101,81 @@ describe('#validate', function() {
 			{
 				'field': 'foo.bar',
 				'code': 'invalid_type',
-				'message': 'Must be a string'
+				'message': 'Must be a string',
+				'details': undefined
 			},
 			{
 				'field': 'foo.baz',
 				'code': 'invalid_type',
-				'message': 'Must be a number'
+				'message': 'Must be a number',
+				'details': undefined
 			},
 			{
 				'field': 'arr.0.zip',
 				'code': 'invalid_type',
-				'message': 'Must be a date'
+				'message': 'Must be a date',
+				'details': undefined
 			},
 			{
 				'field': 'arr.1.zip',
 				'code': 'invalid_type',
-				'message': 'Must be a date'
+				'message': 'Must be a date',
+				'details': undefined
 			},
 			{
 				'field': 'map.bar',
 				'code': 'invalid_type',
-				'message': 'Must be a number'
+				'message': 'Must be a number',
+				'details': undefined
 			},
 			{
 				'field': 'bin',
 				'code': 'invalid_type',
-				'message': 'Must be a buffer'
+				'message': 'Must be a buffer',
+				'details': undefined
 			},
 			{
 				'field': 'boo',
 				'code': 'invalid_type',
-				'message': 'Must be a boolean'
+				'message': 'Must be a boolean',
+				'details': undefined
 			},
 			{
 				'field': 'o.qux',
 				'code': 'invalid_type',
-				'message': 'Must be a number'
+				'message': 'Must be a number',
+				'details': undefined
 			},
 			{
 				'field': 'point',
 				'code': 'invalid_type',
-				'message': 'Must be array in form [ long, lat ]'
+				'message': 'Must be array in form [ long, lat ]',
+				'details': undefined
 			},
 			{
 				'field': 'geojsons.0',
 				'code': 'invalid_format',
-				'message': 'Latitude must be between -90 and 90'
+				'message': 'Latitude must be between -90 and 90',
+				'details': undefined
 			},
 			{
 				'field': 'geojsons.2',
 				'code': 'invalid_format',
-				'message': 'Latitude must be between -90 and 90'
+				'message': 'Latitude must be between -90 and 90',
+				'details': undefined
 			},
 			{
 				'field': 'geojsons.4',
 				'code': 'invalid_format',
-				'message': 'Latitude must be between -90 and 90'
+				'message': 'Latitude must be between -90 and 90',
+				'details': undefined
 			},
 			{
 				'field': 'geojsons.5',
 				'code': 'invalid_type',
 				'message':
-					'GeoJSON object must have type Point, LineString, Polygon, MultiPolygon, GeometryCollection'
+					'GeoJSON object must have type Point, LineString, Polygon, MultiPolygon, GeometryCollection',
+				'details': undefined
 			}
 		];
 
@@ -237,7 +250,7 @@ describe('#validate', function() {
 			});
 		} catch (ex) {
 			expect(ex instanceof ValidationError).to.equal(true);
-			expect(ex.data.fieldErrors).to.deep.equal(expectedErrors);
+			expect(ex.fieldErrors).to.deep.equal(expectedErrors);
 			return;
 		}
 		throw new Error('Should not reach');

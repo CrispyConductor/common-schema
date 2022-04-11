@@ -14,7 +14,7 @@
     "validate"
   ],
   "scripts": {
-    "test": "node ./node_modules/.bin/mocha ./dist/test -R spec",
+    "test": "node ./node_modules/.bin/mocha -R spec --node-option enable-source-maps ./dist/test",
     "build": "tsc"
   },
   "dependencies": {

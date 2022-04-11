@@ -5,6 +5,7 @@ import _ from 'lodash';
 import * as objtools from 'objtools';
 import { SchemaTypeNumber } from './core-schema-types.js';
 import { schema as GeojsonJsonSchema } from './geojson-json-schema.js';
+import { createSchema } from './index.js';
 
 // Instantiate a few types that we can use for internal validation
 const numberType = new SchemaTypeNumber();
@@ -103,8 +104,6 @@ export class SchemaTypeGeoJSON extends SchemaType {
 			return this._geoTypeSchemas[type];
 		}
 		if (this._geoTypeSchemaDatas[type]) {
-			// Sadly, this needs to be here to prevent circular reference issues
-			const createSchema = require('./index').createSchema;
 			this._geoTypeSchemas[type] = createSchema(this._geoTypeSchemaDatas[type]);
 			return this._geoTypeSchemas[type];
 		}

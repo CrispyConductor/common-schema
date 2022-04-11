@@ -52,7 +52,7 @@ describe('#traverseSchema', function() {
 					return false;
 				}
 				if (subschema.type === 'object') {
-					return false;
+					return true;
 				}
 			}
 		});
