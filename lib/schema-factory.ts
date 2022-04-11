@@ -1,8 +1,7 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-
-const Schema = require('./schema');
+import { Schema, SchemaOptions } from './schema.js';
+import { SchemaType } from './schema-type.js';
+import * as coreSchemaTypes from './core-schema-types.js';
+import * as geoSchemaTypes from './geo-schema-types.js';
 
 /**
  * Class that creates schemas.  Custom schema types can be registered to a factory and schemas
@@ -11,13 +10,15 @@ const Schema = require('./schema');
  * @class SchemaFactory
  * @constructor
  */
-class SchemaFactory {
+export class SchemaFactory {
+	_schemaTypes: { [schemaTypeName: string]: SchemaType };
+	_schemaRegistry: { [schemaName: string ]: Schema };
 
 	constructor() {
 		this._schemaTypes = {};
 		this._schemaRegistry = {};
-		this._loadTypes(require('./core-schema-types'));
-		this._loadTypes(require('./geo-schema-types'));
+		this._loadTypes(coreSchemaTypes);
+		this._loadTypes(geoSchemaTypes);
 	}
 
 	/**
@@ -27,7 +28,7 @@ class SchemaFactory {
 	 * @private
 	 * @param {Object} typeMap - A mapping from arbitrary keys to SchemaType constructors
 	 */
-	_loadTypes(typeMap) {
+	_loadTypes(typeMap: { [schemaTypeName: string]: any }): void {
 		for (let key in typeMap) {
 			let Constructor = typeMap[key];
 			let instance = new Constructor();
@@ -42,7 +43,7 @@ class SchemaFactory {
 	 * @param {String} name - String name of type
 	 * @param {SchemaType} schemaType - Instance of a SchemaType
 	 */
-	registerType(name, schemaType) {
+	registerType(name: string, schemaType: SchemaType): void {
 		this._schemaTypes[name] = schemaType;
 	}
 
@@ -55,7 +56,7 @@ class SchemaFactory {
 	 * @param {Object} [options] - Schema options.
 	 * @return {Schema} - The created schema.
 	 */
-	createSchema(schemaData, options) {
+	createSchema(schemaData: any, options: SchemaOptions): Schema {
 		return new Schema(schemaData, this, options);
 	}
 
@@ -67,7 +68,7 @@ class SchemaFactory {
 	 * @param {String} name - String name of schema
 	 * @param {Schema} schema - Instance of a Schema
 	 */
-	registerSchema(name, schema) {
+	registerSchema(name: string, schema: Schema): void {
 		this._schemaRegistry[name] = schema;
 	}
 
@@ -79,9 +80,8 @@ class SchemaFactory {
 	 * @param {String} name - String name of schema
 	 * @return {Schema} - The registered schema.
 	 */
-	getRegisteredSchema(name) {
+	getRegisteredSchema(name: string): Schema {
 		return this._schemaRegistry[name];
 	}
 }
 
-module.exports = SchemaFactory;

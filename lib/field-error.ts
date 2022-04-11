@@ -1,7 +1,3 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-
 /**
  * Class that encapsulates schema error data for a single field.
  *
@@ -28,9 +24,13 @@
  * @param {Mixed} [details] - Additional machine-readable details about the field error.
  * @param {String} field - Dot-separated field name of the problematic field.
  */
-class FieldError {
+export class FieldError {
+	field?: string;
+	code: string;
+	message: string;
+	details?: any;
 
-	constructor(code, message, details, field) {
+	constructor(code: string, message: string, details?: any, field?: string) {
 		if (typeof details === 'string') {
 			field = details;
 			details = undefined;
@@ -44,16 +44,16 @@ class FieldError {
 		Object.defineProperty(this, '_isFieldError', { value: true });
 	}
 
+	/**
+	 * Returns whether or not the parameter is a field error.
+	 *
+	 * @method isFieldError
+	 * @static
+	 */
+	static isFieldError(value: any): boolean {
+		return !!(value && value._isFieldError);
+	}
+
 }
 
-/**
- * Returns whether or not the parameter is a field error.
- *
- * @method isFieldError
- * @static
- */
-FieldError.isFieldError = function(value) {
-	return !!(value && value._isFieldError);
-};
 
-module.exports = FieldError;

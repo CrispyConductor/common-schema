@@ -1,8 +1,4 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-
-const XError = require('xerror');
+import { Schema, SchemaTraverseHandlers, SchemaTraverseOptions, TraverseHandlers, SubschemaType, TransformHandlers, TransformAsyncHandlers, ValidateOptions, NormalizeOptions } from './schema.js';
 
 /**
  * Superclass for schema type definitions.
@@ -11,9 +7,10 @@ const XError = require('xerror');
  * @constructor
  * @param {String} name - Name of schema type.
  */
-class SchemaType {
+export abstract class SchemaType {
+	_typeName: string;
 
-	constructor(name) {
+	constructor(name: string) {
 		this._typeName = name;
 	}
 
@@ -23,7 +20,7 @@ class SchemaType {
 	 * @method getName
 	 * @return {String}
 	 */
-	getName() {
+	getName(): string {
 		return this._typeName;
 	}
 
@@ -35,7 +32,7 @@ class SchemaType {
 	 * @return {Boolean} - True if this type can normalize the shorthand type into a full,
 	 *   proper subschema.
 	 */
-	matchShorthandType(subschema) {
+	matchShorthandType(subschema: any): boolean {
 		return false;
 	}
 
@@ -49,7 +46,7 @@ class SchemaType {
 	 * @param {Schema} schema
 	 * @param {Object} options
 	 */
-	traverseSchema(subschema, path, handlers, schema, options) {
+	traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
 	}
 
 	/**
@@ -62,7 +59,7 @@ class SchemaType {
 	 * @param {Schema} schema - Parent schema
 	 * @return {Object|undefined} - Subschema, if it exists
 	 */
-	getFieldSubschema(subschema, pathComponent, schema) {
+	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
 		return undefined;
 	}
 
@@ -76,7 +73,7 @@ class SchemaType {
 	 * @param {Schema} schema - The parent Schema object
 	 * @return {Object} - The normalized subschema.  Must have a `type` property.
 	 */
-	normalizeSchema(subschema, schema) {
+	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
 		return subschema;
 	}
 
@@ -90,7 +87,7 @@ class SchemaType {
 	 * @param {Schema} schema
 	 * @return {Object} - Normalized subschema
 	 */
-	normalizeShorthandSchema(subschema, schema) {
+	normalizeShorthandSchema(subschema: any, schema: Schema): SubschemaType {
 		return subschema;
 	}
 
@@ -106,7 +103,7 @@ class SchemaType {
 	 * @param {Object} handlers
 	 * @param {Schema} schema - Root schema object.
 	 */
-	traverse(value, subschema, field, handlers, schema) {
+	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
 	}
 
 	/**
@@ -122,7 +119,7 @@ class SchemaType {
 	 * @param {Schema} schema
 	 * @return {Mixed} New value for field (usually should be the same as value)
 	 */
-	transform(value, subschema, field, handlers, schema) {
+	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
 		return value;
 	}
 
@@ -137,7 +134,7 @@ class SchemaType {
 	 * @param {Schema} schema
 	 * @return {Promise} - Resolve with new value for field
 	 */
-	transformAsync(value, subschema, field, handlers, schema) {
+	transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
 		return Promise.resolve(value);
 	}
 
@@ -153,8 +150,7 @@ class SchemaType {
 	 * @param {Object} options
 	 * @param {Schema} schema
 	 */
-	validate(value, subschema, field, options, schema) {
-
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 	}
 
 	/**
@@ -171,7 +167,7 @@ class SchemaType {
 	 * @param {Schema} schema
 	 * @return {Mixed} - The normalized value
 	 */
-	normalize(value, subschema, field, options, schema) {
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
 		return value;
 	}
 
@@ -183,7 +179,7 @@ class SchemaType {
 	 * @param {Mixed[]} validValues
 	 * @return {Boolean} - true if value is in the set of validValues
 	 */
-	checkEnum(value, validValues) {
+	checkEnum(value: any, validValues: any[]): boolean {
 		return (validValues.indexOf(value) !== -1);
 	}
 
@@ -201,20 +197,18 @@ class SchemaType {
 	 * @param {Mixed} value - Value to match against.
 	 * @return {Number} - See description above.
 	 */
-	checkTypeMatch(value, subschema, schema) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		// Default (inefficient) implement is to try to validate, then
 		// to normalize the type.
-		/*eslint-disable*/
 		try {
-			this.validate(value);
+			this.validate(value, subschema, '', {}, schema);
 			return 3;
 		} catch (ex) { }
 		try {
-			this.normalize(value);
+			this.normalize(value, subschema, '', {}, schema);
 			return 2;
 		} catch (ex) { }
 		return 0;
-		/*eslint-enable*/
 	}
 
 	/**
@@ -225,10 +219,9 @@ class SchemaType {
 	 * @param {Schema} schema
 	 * @return {Object}
 	 */
-	toJSONSchema(subschema, schema) {
-		throw new XError(XError.UNSUPPORTED_OPERATION, 'Cannot convert type to JSON schema');
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
+		throw new Error('Cannot convert type to JSON schema');
 	}
 
 }
 
-module.exports = SchemaType;

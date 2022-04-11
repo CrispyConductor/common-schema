@@ -1,9 +1,6 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
+import { expect } from 'chai';
+import { createSchema } from '../lib/index.js';
 
-let expect = require('chai').expect;
-let createSchema = require('../lib').createSchema;
 
 describe('#traverseSchema', function() {
 
@@ -20,9 +17,10 @@ describe('#traverseSchema', function() {
 		});
 
 		schema.traverseSchema({
-			onSubschema(subschema, path) {
+			onSubschema(subschema, path, subschemaType, rawPath) {
 				types.push(subschema.type);
 				paths.push(path);
+				return undefined;
 			}
 		});
 
@@ -47,14 +45,14 @@ describe('#traverseSchema', function() {
 		});
 
 		schema.traverseSchema({
-			onSubschema(subschema, path) {
+			onSubschema(subschema, path, subschemaType, rawPath) {
 				types.push(subschema.type);
 				paths.push(path);
 				if (subschema.type === 'array') {
 					return false;
 				}
 				if (subschema.type === 'object') {
-					return 0;
+					return false;
 				}
 			}
 		});

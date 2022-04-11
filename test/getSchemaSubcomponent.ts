@@ -1,11 +1,7 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
+import { expect } from 'chai';
+import { createSchema, or, map } from '../lib/index.js';
 
-let expect = require('chai').expect;
-let createSchema = require('../lib').createSchema;
-let or = require('../lib').or;
-let map = require('../lib').map;
+
 
 describe('#getFieldSubschema', function() {
 

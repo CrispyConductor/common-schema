@@ -1,13 +1,6 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-
-let expect = require('chai').expect;
-let createSchema = require('../lib').createSchema;
-let Mixed = require('../lib').Mixed;
-let or = require('../lib').or;
-let map = require('../lib').map;
-let _ = require('lodash');
+import { expect } from 'chai';
+import { createSchema, Mixed, or, map } from '../lib/index.js';
+import _ from 'lodash';
 
 describe('#transformAsync', function() {
 

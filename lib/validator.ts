@@ -1,8 +1,6 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-
-let FieldError = require('./field-error');
+import { FieldError } from './field-error.js';
+import { Schema, ValidateOptions, SubschemaType } from './schema.js';
+import { SchemaType } from './schema-type.js';
 
 /**
  * Class containing handlers to validate an object according to a schema.  Instantiated in
@@ -13,23 +11,26 @@ let FieldError = require('./field-error');
  * @param {Schema} schema
  * @param {Object} options
  */
-class Validator {
+export class Validator {
+	schema: Schema;
+	options: ValidateOptions;
+	fieldErrors: FieldError[];
 
-	constructor(schema, options) {
+	constructor(schema: Schema, options: ValidateOptions = {}) {
 		this.schema = schema;
 		this.options = options;
 		this.fieldErrors = [];
 	}
 
-	addFieldError(fieldError) {
+	addFieldError(fieldError: FieldError): void {
 		this.fieldErrors.push(fieldError);
 	}
 
-	getFieldErrors() {
+	getFieldErrors(): FieldError[] {
 		return this.fieldErrors;
 	}
 
-	onField(field, value, subschema, subschemaType) {
+	onField(field: string, value: any, subschema: SubschemaType, subschemaType: SchemaType) {
 		if (
 			(value === undefined || value === null) &&
 			subschema.default !== undefined && subschema.default !== null
@@ -71,12 +72,11 @@ class Validator {
 		}
 	}
 
-	onUnknownField(field, value) {
-		if (!this.options.allowUnknownFields && !this.options.removeUnknownFields) {
+	onUnknownField(field: string, value: any): void {
+		if (!this.options.allowUnknownFields) {
 			this.addFieldError(new FieldError('unknown_field', 'Unknown field', field));
 		}
 	}
 
 }
 
-module.exports = Validator;

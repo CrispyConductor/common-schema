@@ -1,10 +1,5 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-
-const expect = require('chai').expect;
-const createSchema = require('../lib').createSchema;
-const XError = require('xerror');
+import { expect } from 'chai';
+import { createSchema } from '../lib/index.js';
 
 describe('#filterSchema', function() {
 	it('includes entire subchemas for which fn returns true', function() {
@@ -184,7 +179,8 @@ describe('#filterSchema', function() {
 		});
 		let fn = () => 'something else';
 
-		expect(() => schema.filterSchema(fn)).to.throw(XError);
+		// @ts-ignore
+		expect(() => schema.filterSchema(fn)).to.throw(Error);
 	});
 
 	it('correctly handles array schemas', function() {

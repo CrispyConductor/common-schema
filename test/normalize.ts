@@ -1,13 +1,5 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-
-let expect = require('chai').expect;
-let createSchema = require('../lib').createSchema;
-let ValidationError = require('../lib').ValidationError;
-let Mixed = require('../lib').Mixed;
-let or = require('../lib').or;
-let FieldError = require('../lib').FieldError;
+import { expect } from 'chai';
+import { createSchema, ValidationError, Mixed, or, FieldError } from '../lib/index.js';
 
 describe('#normalize', function() {
 

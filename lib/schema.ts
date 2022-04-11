@@ -1,13 +1,84 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
+import { SchemaError } from './schema-error.js';
+import { ValidationError } from './validation-error.js';
+import { Normalizer } from './normalizer.js';
+import { Validator } from './validator.js';
+import { SchemaFactory } from './schema-factory.js';
+import { SchemaType } from './schema-type.js';
+import { FieldError } from './field-error.js';
+import * as objtools from 'objtools';
 
-let SchemaError = require('./schema-error');
-let ValidationError = require('./validation-error');
-let Normalizer = require('./normalizer');
-let Validator = require('./validator');
-let objtools = require('objtools');
-let XError = require('xerror');
+export type SchemaOptions = {
+	skipNormalize?: boolean;
+};
+
+export type SubschemaType = {
+	type: string;
+	[param: string]: any;
+};
+
+export type SchemaTraverseHandlers = {
+	onSubschema?: (subschema: SubschemaType, path?: string, subschemaType?: SchemaType, rawPath?: string) => boolean | undefined;
+};
+
+export type SchemaTraverseOptions = {
+	includePathArrays?: boolean;
+};
+
+export type TraverseHandlers = {
+	onField?: (field: string, value: any, subschema?: SubschemaType, subschemaType?: SchemaType) => boolean | undefined;
+	onUnknownField?: (field: string, value: any) => void;
+};
+
+export type TransformHandlers = {
+	onField?: (field: string, value: any, subschema?: SubschemaType, subschemaType?: SchemaType) => any;
+	onUnknownField?: (field: string, value: any) => any;
+	postField?: (field: string, value: any, subschema?: SubschemaType, subschemaType?: SchemaType) => any;
+};
+
+export type TransformAsyncHandlers = {
+	onField?: (field: string, value: any, subschema?: SubschemaType, subschemaType?: SchemaType) => Promise<any>;
+	onUnknownField?: (field: string, value: any) => Promise<any>;
+	postField?: (field: string, value: any, subschema?: SubschemaType, subschemaType?: SchemaType) => Promise<any>;
+};
+
+export interface ValidatorConstructor {
+	new (schema: Schema, options: ValidateOptions): Validator;
+};
+
+export type ValidateOptions = {
+	allowUnknownFields?: boolean;
+	allowMissingFields?: boolean;
+	Validator?: ValidatorConstructor;
+};
+
+export interface NormalizerConstructor {
+	new (schema: Schema, options: NormalizeOptions): Normalizer;
+};
+
+export type NormalizeOptions = {
+	allowUnknownFields?: boolean;
+	allowMissingFields?: boolean;
+	removeUnknownFields?: boolean;
+	ignoreDefaults?: boolean;
+	serialize?: boolean;
+	Normalizer?: NormalizerConstructor;
+};
+
+export type HasParentTypeOptions = {
+	skipLastField?: boolean;
+};
+
+export type ListFieldsOptions = {
+	stopAtArrays?: boolean;
+	onlyLeaves?: boolean;
+	maxDepth?: number;
+	includePathArrays?: boolean;
+};
+
+
+
+
+
 
 /**
  * This class wraps a schema definition and provides methods to utilize it.
@@ -27,17 +98,18 @@ let XError = require('xerror');
  *   @param {Boolean} options.skipNormalize - If true, assume the schema is already normalized
  *     and does not need to be additionally normalized.
  */
-class Schema {
+export class Schema {
+	_schemaData: any;
+	_schemaFactory: SchemaFactory;
+	_isCommonSchema: boolean = true;
+	jsonSchemaDefinitions: { [key: string]: any } = null;
 
-	constructor(schemaData, schemaFactory, options = {}) {
+	constructor(schemaData: any, schemaFactory: SchemaFactory, options: SchemaOptions = {}) {
 		this._schemaData = schemaData;
 		this._schemaFactory = schemaFactory;
-		this._isCommonSchema = true;
 		if (!options.skipNormalize) {
 			this.normalizeSchema();
 		}
-		this._schemaData = objtools.deepCopy(this._schemaData);
-
 		// Used to register JSON Schema definitions by schema types.
 		this.jsonSchemaDefinitions = null;
 	}
@@ -56,7 +128,7 @@ class Schema {
 	 *     If this option is set to true, keys to arrays are represented by an '$' key such as
 	 *     `foo.$.bar` .
 	 */
-	traverseSchema(handlers, options = {}) {
+	traverseSchema(handlers: SchemaTraverseHandlers, options: SchemaTraverseOptions = {}): void {
 		this._traverseSubschema(this._schemaData, '', '', handlers, options);
 	}
 
@@ -67,12 +139,13 @@ class Schema {
 	 * @method _traverseSubschema
 	 * @private
 	 * @param {Object} subschema - The subschema object
-	 * @param {String} path - Path to current subschema
+	 * @param {String} path - Object path to current subschema (eg. path in the type of objects that the schema represents)
+	 * @param {String} rawPath - Schema path to current subschema (eg. including .elements for arrays, .values for maps, .properties for objects)
 	 * @param {Object} handlers
 	 * @param {Object} options
 	 */
-	_traverseSubschema(subschema, path, rawPath, handlers, options) {
-		let result;
+	_traverseSubschema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, options: SchemaTraverseOptions = {}): void {
+		let result: boolean | undefined = undefined;
 		let subschemaType = this._getType(subschema.type);
 		if (handlers.onSubschema) {
 			result = handlers.onSubschema(subschema, path, subschemaType, rawPath);
@@ -89,7 +162,7 @@ class Schema {
 	 * @method normalizeSchema
 	 * @throws {SchemaError} - On invalid schema
 	 */
-	normalizeSchema() {
+	normalizeSchema(): void {
 		this._schemaData = this._normalizeSubschema(this._schemaData);
 	}
 
@@ -101,15 +174,15 @@ class Schema {
 	 * @param {Mixed} subschema - Subschema data to normalize
 	 * @return {Object} - Normalized subschema
 	 */
-	_normalizeSubschema(subschema) {
+	_normalizeSubschema(subschema: any): SubschemaType {
 		if (objtools.isPlainObject(subschema) && typeof subschema.type === 'string') {
 			// Full schema
-			let schemaType = this._getType(subschema.type);
+			let schemaType: SchemaType = this._getType(subschema.type);
 			schemaType.normalizeSchema(subschema, this);
 			return subschema;
 		} else if (typeof subschema === 'string') {
 			// Plain type name
-			let schemaType = this._getType(subschema);
+			let schemaType: SchemaType = this._getType(subschema);
 			subschema = {
 				type: subschema
 			};
@@ -117,7 +190,7 @@ class Schema {
 			return subschema;
 		} else if (objtools.isPlainObject(subschema) && subschema.type) {
 			// Full schema with shorthand type
-			let schemaType, schemaTypeName;
+			let schemaType: SchemaType, schemaTypeName: string;
 			for (schemaTypeName in this._schemaFactory._schemaTypes) {
 				if (this._schemaFactory._schemaTypes[schemaTypeName].matchShorthandType(subschema.type)) {
 					schemaType = this._schemaFactory._schemaTypes[schemaTypeName];
@@ -131,7 +204,7 @@ class Schema {
 			return subschema;
 		} else {
 			// Shorthand schema
-			let schemaType, schemaTypeName;
+			let schemaType: SchemaType, schemaTypeName: string;
 			for (schemaTypeName in this._schemaFactory._schemaTypes) {
 				if (this._schemaFactory._schemaTypes[schemaTypeName].matchShorthandType(subschema)) {
 					schemaType = this._schemaFactory._schemaTypes[schemaTypeName];
@@ -161,13 +234,12 @@ class Schema {
 	 *
 	 * @return {Schema} - A copy of the schema, without subschemas that fail the test.
 	 */
-	filterSchema(fn) {
+	filterSchema(fn: (subschema: SubschemaType, path?: string, rawPath?: string) => boolean): Schema {
 		// Build filtered schema object using shorthand.
-		let filtered = objtools.deepCopy(this.getData());
+		let filtered: any = objtools.deepCopy(this.getData());
 		this.traverseSchema({
 			onSubschema: (subschema, path, subschemaType, rawPath) => {
-				let include = fn(subschema, path, rawPath);
-
+				let include: boolean = fn(subschema, path, rawPath);
 				if (include === true) {
 					// Include entire subschema and stop traversal
 					return false;
@@ -179,7 +251,7 @@ class Schema {
 					// No action; continue to traverse
 					return true;
 				} else {
-					throw new XError(XError.INTERNAL_ERROR, `Invalid fn return value ${include}`);
+					throw new Error(`Invalid fn return value ${include}`);
 				}
 			}
 		}, { includePathArrays: true });
@@ -193,7 +265,7 @@ class Schema {
 	 * @method getData
 	 * @return {Mixed} - Raw schema data
 	 */
-	getData() {
+	getData(): SubschemaType {
 		return this._schemaData;
 	}
 
@@ -231,7 +303,7 @@ class Schema {
 	 *     @param {String} handlers.onUnknownField.field - Path to field.
 	 *     @param {Mixed} handlers.onUnknownField.value - Value of the field.
 	 */
-	traverse(obj, handlers) {
+	traverse(obj: any, handlers: TraverseHandlers): void {
 		this._traverseSubschemaValue(obj, this._schemaData, '', handlers);
 	}
 
@@ -247,10 +319,10 @@ class Schema {
 	 * @param {String} field - Dot-separated field name.
 	 * @param {Object} handlers
 	 */
-	_traverseSubschemaValue(value, subschema, field, handlers) {
+	_traverseSubschemaValue(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers): void {
 		if (subschema) {
-			let subschemaType = this._getType(subschema.type);
-			let handlerResult = true;
+			let subschemaType: SchemaType = this._getType(subschema.type);
+			let handlerResult: boolean | undefined = true;
 			if (handlers.onField) {
 				handlerResult = handlers.onField(field, value, subschema, subschemaType);
 			}
@@ -276,8 +348,8 @@ class Schema {
 	 * @throws {SchemaError}
 	 * @param {Mixed} obj
 	 * @param {Object} handlers - Handler functions to call while traversing.
-	 *   @param {Function} handlers.onField - Function called for each field in the schema.  This
-	 *     function can return a boolean false to skip descending into child values.
+	 *   @param {Function} handlers.onField - Function called for each field in the schema.  Returns
+	 *       new value for the field.
 	 *     @param {String} handlers.onField.field - String dot-separated path to the field.
 	 *     @param {Mixed} handlers.onField.value - Value of the field on the object.
 	 *     @param {Object} handlers.onField.schema - Normalized schema component corresponding to the
@@ -296,7 +368,7 @@ class Schema {
 	 *     @param {SchemaType} handlers.postField.subschemaType
 	 * @return {Mixed} - Transformed object.
 	 */
-	transform(obj, handlers) {
+	transform(obj: any, handlers: TransformHandlers): any {
 		return this._transformSubschemaValue(obj, this._schemaData, '', handlers);
 	}
 
@@ -311,10 +383,10 @@ class Schema {
 	 * @param {Object} handlers - Object of transform handlers.
 	 * @return {Mixed} - The new value of the field.
 	 */
-	_transformSubschemaValue(value, subschema, field, handlers) {
-		let newValue = value;
+	_transformSubschemaValue(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers): any {
+		let newValue: any = value;
 		if (subschema) {
-			let subschemaType = this._getType(subschema.type);
+			let subschemaType: SchemaType = this._getType(subschema.type);
 			if (handlers.onField) {
 				newValue = handlers.onField(field, newValue, subschema, subschemaType);
 			}
@@ -341,7 +413,7 @@ class Schema {
 	 * @param {Object} handlers
 	 * @return {Promise} - Resolves with result object
 	 */
-	transformAsync(obj, handlers) {
+	transformAsync(obj: any, handlers: TransformAsyncHandlers): Promise<any> {
 		try {
 			return this._transformSubschemaValueAsync(obj, this._schemaData, '', handlers);
 		} catch (ex) {
@@ -358,14 +430,14 @@ class Schema {
 	 * @param {Object} handlers
 	 * @return {Promise} - Promise that resolves to the new value
 	 */
-	_transformSubschemaValueAsync(value, subschema, field, handlers) {
+	_transformSubschemaValueAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers): Promise<any> {
 		if (subschema) {
-			let subschemaType = this._getType(subschema.type);
-			let promise = Promise.resolve(value);
+			let subschemaType: SchemaType = this._getType(subschema.type);
+			let promise: Promise<any> = Promise.resolve(value);
 			if (handlers.onField) {
-				promise = promise.then( newValue => handlers.onField(field, newValue, subschema, subschemaType) );
+				promise = promise.then( (newValue: any): Promise<any> => handlers.onField(field, newValue, subschema, subschemaType) );
 			}
-			promise = promise.then( newValue => {
+			promise = promise.then( (newValue: any): Promise<any> => {
 				if (newValue !== null && newValue !== undefined) {
 					return subschemaType.transformAsync(newValue, subschema, field, handlers, this);
 				} else {
@@ -373,7 +445,7 @@ class Schema {
 				}
 			} );
 			if (handlers.postField) {
-				promise = promise.then( newValue => handlers.postField(field, newValue, subschema, subschemaType) );
+				promise = promise.then( (newValue: any): Promise<any> => handlers.postField(field, newValue, subschema, subschemaType) );
 			}
 			return promise;
 		} else {
@@ -403,8 +475,8 @@ class Schema {
 	 *     field is missing.  If this is true, required field errors are suppressed.
 	 * @return {Boolean} true
 	 */
-	validate(value, options = {}) {
-		let validator;
+	validate(value: any, options: ValidateOptions = {}): void {
+		let validator: Validator;
 		if (options.Validator) {
 			validator = new (options.Validator)(this, options);
 		} else {
@@ -414,7 +486,6 @@ class Schema {
 		if (validator.getFieldErrors().length) {
 			throw new ValidationError(validator.getFieldErrors());
 		}
-		return true;
 	}
 
 	/**
@@ -423,9 +494,10 @@ class Schema {
 	 * @method isValid
 	 * @return {Boolean}
 	 */
-	isValid() {
+	isValid(value: any, options: ValidateOptions = {}): boolean {
 		try {
-			return this.validate(...arguments);
+			this.validate(value, options);
+			return true;
 		} catch (ex) {
 			return false;
 		}
@@ -453,15 +525,15 @@ class Schema {
 	 *   @param {Boolean} options.ignoreDefaults - Do not create/run field defaults
 	 * @return {Mixed} - The normalized value; if an object, the same as the value parameter
 	 */
-	normalize(value, options = {}) {
-		let normalizer;
+	normalize(value: any, options: NormalizeOptions = {}): any {
+		let normalizer: Normalizer;
 		if (options.Normalizer) {
 			normalizer = new (options.Normalizer)(this, options);
 		} else {
 			normalizer = new Normalizer(this, options);
 		}
-		let normalizedValue = this.transform(value, normalizer);
-		const fieldErrors = normalizer.getFieldErrors();
+		let normalizedValue: any = this.transform(value, normalizer);
+		const fieldErrors: FieldError[] = normalizer.getFieldErrors();
 		if (fieldErrors.length) {
 			throw new ValidationError(fieldErrors);
 		}
@@ -478,7 +550,7 @@ class Schema {
 	 * @param {Object} [options]
 	 * @return {Mixed}
 	 */
-	serialize(value, options = {}) {
+	serialize(value: any, options: NormalizeOptions = {}): any {
 		options.serialize = true;
 		return this.normalize(value, options);
 	}
@@ -491,7 +563,7 @@ class Schema {
 	 * @param {Object} [options] - Options to validate()
 	 * @return {Function} - function(value) that validates the value
 	 */
-	createValidateFn(options = {}) {
+	createValidateFn(options: ValidateOptions = {}): (value: any) => void {
 		return (value) => this.validate(value, options);
 	}
 
@@ -503,7 +575,7 @@ class Schema {
 	 * @param {Object} [options] - Options to normalize()
 	 * @return {Function} - function(value) that normalizes the value
 	 */
-	createNormalizeFn(options) {
+	createNormalizeFn(options: NormalizeOptions = {}): (value: any) => any {
 		return (value) => this.normalize(value, options);
 	}
 
@@ -516,8 +588,8 @@ class Schema {
 	 * @param {String} name
 	 * @return {SchemaType}
 	 */
-	_getType(name) {
-		let schemaType = this._schemaFactory._schemaTypes[name];
+	_getType(name: string): SchemaType {
+		let schemaType: SchemaType = this._schemaFactory._schemaTypes[name];
 		if (!schemaType) {
 			throw new SchemaError('Unknown schema type: ' + name);
 		}
@@ -532,7 +604,7 @@ class Schema {
 	 * @param {Object} subschema - The subschema data
 	 * @return {SchemaType}
 	 */
-	getSchemaType(subschema) {
+	getSchemaType(subschema: SubschemaType): SchemaType {
 		return this._getType(subschema.type);
 	}
 
@@ -545,13 +617,13 @@ class Schema {
 	 * @return {Object|Undefined} - The subschema, or undefined if a matching subschema
 	 *   couldn't be found.
 	 */
-	getSubschemaData(path) {
+	getSubschemaData(path: string): SubschemaType {
 		// Edge case for root path
 		if (!path) return this.getData();
 
 		// Traverse schema along path
-		let pathComponents = path.split('.');
-		let currentSubschema = this.getData();
+		let pathComponents: string[] = path.split('.');
+		let currentSubschema: SubschemaType = this.getData();
 		for (let pathComponent of pathComponents) {
 			if (!currentSubschema) return undefined;
 			currentSubschema = this
@@ -569,7 +641,7 @@ class Schema {
 	 * @param {Mixed} schemaData - Data for the subschema
 	 * @return {Schema}
 	 */
-	_createSubschema(schemaData) {
+	_createSubschema(schemaData: SubschemaType): Schema {
 		return new Schema(schemaData, this._schemaFactory, { skipNormalize: true });
 	}
 
@@ -585,17 +657,17 @@ class Schema {
 	 * @returns {Boolean} Whether this path contains a parent with the given type name.
 	 * NOTE: this will also return true in the result of an issue (ie, path not existing).
 	 */
-	hasParentType(path, type, opts = {}) {
-		let pathParts = path.split('.');
+	hasParentType(path: string, type: string, opts: HasParentTypeOptions = {}): boolean {
+		let pathParts: string[] = path.split('.');
 		if (opts.skipLastField) {
 			pathParts = pathParts.splice(0, pathParts.length - 2);
 		}
-		let field = '';
+		let field: string = '';
 		for (let pathPart of pathParts) {
 			field = (field) ? `${field}.${pathPart}` : pathPart;
-			let subschemaData = this.getSubschemaData(field);
+			let subschemaData: SubschemaType = this.getSubschemaData(field);
 			if (!subschemaData) {
-				let msg = `Did not find field in schema: ${field}`;
+				let msg: string = `Did not find field in schema: ${field}`;
 				throw new SchemaError(msg);
 			}
 			// accessing field within an array
@@ -622,10 +694,10 @@ class Schema {
 	 * @param {Boolean} [options.onlyLeaves=false] - If true, only leaf paths are returned.
 	 * @return {String[]}
 	 */
-	listFields(options = {}) {
-		let fields = [];
-		let stopAtArrays = options.stopAtArrays === undefined || options.stopAtArrays;
-		let lastField;
+	listFields(options: ListFieldsOptions = {}): string[] {
+		let fields: string[] = [];
+		let stopAtArrays: boolean = options.stopAtArrays === undefined || options.stopAtArrays;
+		let lastField: string;
 		this.traverseSchema({
 			onSubschema(subschema, path) {
 				if (!path) return true;
@@ -669,12 +741,12 @@ class Schema {
 	 * @method toJSONSchema
 	 * @return {Object}
 	 */
-	toJSONSchema() {
+	toJSONSchema(): any {
 		// Used to register JSON Schema definitions at the root of the schema.
 		this.jsonSchemaDefinitions = {};
 
-		let data = this.getData();
-		let jsonSchema = this._subschemaToJSONSchema(data);
+		let data: SubschemaType = this.getData();
+		let jsonSchema: any = this._subschemaToJSONSchema(data);
 
 		// Attach definitions, if any
 		if (Object.keys(this.jsonSchemaDefinitions).length) {
@@ -694,9 +766,9 @@ class Schema {
 	 * @param {Object} subschema
 	 * @return {Object}
 	 */
-	_subschemaToJSONSchema(subschema) {
-		let schemaType = this._getType(subschema.type);
-		let jsonSchema = schemaType.toJSONSchema(subschema, this);
+	_subschemaToJSONSchema(subschema: SubschemaType): any {
+		let schemaType: SchemaType = this._getType(subschema.type);
+		let jsonSchema: any = schemaType.toJSONSchema(subschema, this);
 		if (!jsonSchema) return null;
 		if (subschema.description) jsonSchema.description = subschema.description;
 		if (subschema.enum) jsonSchema.enum = objtools.deepCopy(subschema.enum);
@@ -712,7 +784,7 @@ class Schema {
 	 * @param {*} value - Value to test
 	 * @return {Boolean}
 	 */
-	static isSchema(value) {
+	static isSchema(value: any): boolean {
 		return !!(value && value._isCommonSchema === true);
 	}
 
@@ -726,11 +798,11 @@ class Schema {
 	 * @param {String} path - The path, dot-separated, with array paths as '$'.
 	 * @param {Mixed} value - Value to set
 	 */
-	static _setPathWithArrays(obj, path, value) {
+	static _setPathWithArrays(obj: any, path: string, value: any): any {
 		let cur = obj;
 		let parts = path.split('.');
 		for (let i = 0; i < parts.length; i++) {
-			let key = parts[i];
+			let key: any = parts[i];
 			if (key === '$') key = 0;
 			if (i === parts.length - 1) {
 				cur[key] = value;
@@ -750,4 +822,3 @@ class Schema {
 
 }
 
-module.exports = Schema;

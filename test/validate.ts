@@ -1,13 +1,6 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
+import { expect } from 'chai';
+import { createSchema, ValidationError, Mixed, or, map } from '../lib/index.js';
 
-const { expect } = require('chai');
-const { createSchema } = require('../lib');
-const { ValidationError } = require('../lib');
-const { Mixed } = require('../lib');
-const { or } = require('../lib');
-const { map } = require('../lib');
 
 describe('#validate', function() {
 	const schema = createSchema({

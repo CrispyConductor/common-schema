@@ -1,11 +1,12 @@
 {
   "name": "common-schema",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Schema-handling utilities, including schema validators and checkers.",
-  "main": "./lib/index.js",
+  "main": "./dist/lib/index.js",
+  "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zipscene/common-schema.git"
+    "url": "https://github.com/CrispyConductor/common-schema.git"
   },
   "keywords": [
     "schema",
@@ -13,19 +14,22 @@
     "validate"
   ],
   "scripts": {
-    "lint": "node ./node_modules/.bin/eslint . || exit 0",
-    "test": "node ./node_modules/.bin/mocha ./test -R spec"
+    "test": "node ./node_modules/.bin/mocha ./dist/test -R spec",
+    "build": "tsc"
   },
   "dependencies": {
-    "lodash": "^4.17.20",
-    "objtools": "^3.0.0",
-    "pasync": "^2.0.1",
-    "xerror": "^2.0.0"
+    "chai": "^4.3.6",
+    "lodash": "^4.17.21",
+    "mocha": "^9.2.2",
+    "objtools": "^4.0.0"
   },
   "devDependencies": {
-    "chai": "^4.2.0",
-    "eslint": "^7.7.0",
-    "mocha": "^8.1.1"
+    "@types/chai": "^4.3.0",
+    "@types/lodash": "^4.14.181",
+    "@types/mocha": "^9.1.0",
+    "@types/node": "^14.18.12",
+    "@types/objtools": "^2.0.0",
+    "typescript": "^4.6.3"
   },
   "license": "Apache-2.0",
   "engines": {

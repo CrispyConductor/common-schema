@@ -1,8 +1,4 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-
-let objtools = require('objtools');
+import * as objtools from 'objtools';
 
 /**
  * Generates a subschema that's an OR between two or more other schemas (ie, any of the
@@ -20,7 +16,7 @@ let objtools = require('objtools');
  * @param {Mixed} args... - Subschemas that are alternatives.
  * @return {Object} The `or` type subschema.
  */
-function or(schema, ...args) {
+export function or(schema, ...args: any[]) {
 	if (!objtools.isPlainObject(schema)) {
 		args.unshift(schema);
 		schema = {};
@@ -30,4 +26,3 @@ function or(schema, ...args) {
 	return schema;
 }
 
-module.exports = or;

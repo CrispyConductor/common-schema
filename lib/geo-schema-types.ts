@@ -1,14 +1,10 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-
-let SchemaType = require('./schema-type');
-let FieldError = require('./field-error');
-let _ = require('lodash');
-let objtools = require('objtools');
-let { SchemaTypeNumber } = require('./core-schema-types');
-
-const GeojsonJsonSchema = require('./geojson-json-schema');
+import { SchemaType } from './schema-type.js';
+import { SubschemaType } from './schema.js';
+import { FieldError } from './field-error.js';
+import _ from 'lodash';
+import * as objtools from 'objtools';
+import { SchemaTypeNumber } from './core-schema-types.js';
+import { schema as GeojsonJsonSchema } from './geojson-json-schema.js';
 
 // Instantiate a few types that we can use for internal validation
 const numberType = new SchemaTypeNumber();
@@ -41,14 +37,15 @@ function normalizePosition(value) {
 		if (value.length !== 2) {
 			throw new FieldError('invalid_type', 'Must be array in form [ long, lat ]');
 		}
-		value[0] = numberType.normalize(value[0], { type: 'number', min: -180, max: 180 });
-		value[1] = numberType.normalize(value[1], { type: 'number', min: -90, max: 90 });
+		value[0] = numberType.normalize(value[0], { type: 'number', min: -180, max: 180 }, '', {}, null);
+		value[1] = numberType.normalize(value[1], { type: 'number', min: -90, max: 90 }, '', {}, null);
 	}
 	validatePosition(value);
 	return value;
 }
 
-class SchemaTypeGeoPoint extends SchemaType {
+export class SchemaTypeGeoPoint extends SchemaType {
+	_numberType: SchemaTypeNumber;
 
 	constructor(name) {
 		super(name || 'geopoint');
@@ -77,10 +74,11 @@ class SchemaTypeGeoPoint extends SchemaType {
 
 }
 
-exports.SchemaTypeGeoPoint = SchemaTypeGeoPoint;
 
 
-class SchemaTypeGeoJSON extends SchemaType {
+export class SchemaTypeGeoJSON extends SchemaType {
+	_geoTypeSchemaDatas: { [key: string]: SubschemaType };
+	_geoTypeSchemas: any;
 
 	constructor(name) {
 		super(name || 'geojson');
@@ -156,8 +154,10 @@ class SchemaTypeGeoJSON extends SchemaType {
 	}
 
 	toJSONSchema(subschema, schema) {
+		// @ts-ignore
 		_.assignIn(schema.jsonSchemaDefinitions, GeojsonJsonSchema.definitions);
 
+		// @ts-ignore
 		let jsonSchema = objtools.deepCopy(GeojsonJsonSchema.schema);
 
 		if (subschema.description) {
@@ -168,4 +168,3 @@ class SchemaTypeGeoJSON extends SchemaType {
 	}
 }
 
-exports.SchemaTypeGeoJSON = SchemaTypeGeoJSON;

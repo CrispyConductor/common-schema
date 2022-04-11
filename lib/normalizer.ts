@@ -1,8 +1,8 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
+import { FieldError } from './field-error.js';
+import { Schema, NormalizeOptions, SubschemaType } from './schema.js';
+import { SchemaType } from './schema-type.js';
 
-const FieldError = require('./field-error');
+
 
 /**
  * Class containing handlers to normalize an object according to a schema.  Instantiated in
@@ -13,23 +13,26 @@ const FieldError = require('./field-error');
  * @param {Schema} schema
  * @param {Object} options
  */
-class Normalizer {
+export class Normalizer {
+	schema: Schema;
+	options: NormalizeOptions;
+	fieldErrors: FieldError[];
 
-	constructor(schema, options = {}) {
+	constructor(schema: Schema, options: NormalizeOptions = {}) {
 		this.schema = schema;
 		this.options = options;
 		this.fieldErrors = [];
 	}
 
-	addFieldError(fieldError) {
+	addFieldError(fieldError: FieldError): void {
 		this.fieldErrors.push(fieldError);
 	}
 
-	getFieldErrors() {
+	getFieldErrors(): FieldError[] {
 		return this.fieldErrors;
 	}
 
-	onField(field, value, subschema, subschemaType) {
+	onField(field: string, value: any, subschema: SubschemaType, subschemaType: SchemaType): any {
 		if (
 			(value === undefined || value === null) &&
 			subschema.default !== undefined && subschema.default !== null &&
@@ -77,7 +80,7 @@ class Normalizer {
 		return value;
 	}
 
-	onUnknownField(field, value) {
+	onUnknownField(field: string, value: any): any {
 		if (this.options.removeUnknownFields) {
 			return undefined;
 		} else if (!this.options.allowUnknownFields) {
@@ -88,4 +91,3 @@ class Normalizer {
 
 }
 
-module.exports = Normalizer;

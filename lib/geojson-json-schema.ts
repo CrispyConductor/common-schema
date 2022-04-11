@@ -1,6 +1,6 @@
 // http://json.schemastore.org/geojson
 /* eslint-disable max-len */
-const schema = {
+export const schema = {
 	type: 'object',
 	description: 'This object represents a geometry, feature, or collection of features.',
 	additionalProperties: true,
@@ -339,7 +339,7 @@ const schema = {
 	]
 };
 
-const definitions = {
+export const definitions = {
 	coordinates: {
 		title: 'Coordinates',
 		type: 'array',
@@ -461,9 +461,5 @@ const definitions = {
 		}
 	}
 };
-/* eslint-enable max-len */
 
-module.exports = {
-	definitions,
-	schema
-};
+

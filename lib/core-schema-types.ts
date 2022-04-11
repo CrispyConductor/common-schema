@@ -1,26 +1,24 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
+import { SchemaType } from './schema-type.js';
+import { SchemaError } from './schema-error.js';
+import { FieldError } from './field-error.js';
+import { ValidationError } from './validation-error.js';
+import { Mixed } from './mixed.js';
+import _ from 'lodash';
+import * as objtools from 'objtools';
+import { SubschemaType, Schema, SchemaTraverseHandlers, SchemaTraverseOptions, TraverseHandlers, TransformHandlers, TransformAsyncHandlers, ValidateOptions, NormalizeOptions } from './schema.js';
 
-let SchemaType = require('./schema-type');
-let SchemaError = require('./schema-error');
-let FieldError = require('./field-error');
-let ValidationError = require('./validation-error');
-let Mixed = require('./mixed');
-let _ = require('lodash');
-let objtools = require('objtools');
 
-class SchemaTypeObject extends SchemaType {
+export class SchemaTypeObject extends SchemaType {
 
-	constructor(name) {
+	constructor(name: string = 'object') {
 		super(name || 'object');
 	}
 
-	matchShorthandType(subschema) {
+	matchShorthandType(subschema: any): boolean {
 		return objtools.isPlainObject(subschema);
 	}
 
-	traverseSchema(subschema, path, rawPath, handlers, schema, options) {
+	traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
 		for (let prop in subschema.properties) {
 			schema._traverseSubschema(
 				subschema.properties[prop],
@@ -32,18 +30,22 @@ class SchemaTypeObject extends SchemaType {
 		}
 	}
 
-	getFieldSubschema(subschema, pathComponent, schema) {
+
+	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
+		schema;
 		return subschema.properties[pathComponent];
 	}
 
-	normalizeShorthandSchema(subschema, schema) {
+
+	normalizeShorthandSchema(subschema: any, schema: Schema): SubschemaType {
 		if (objtools.isPlainObject(subschema.type)) {
 			subschema.properties = subschema.type;
 		}
 		return subschema;
 	}
 
-	normalizeSchema(subschema, schema) {
+
+	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
 		if (!objtools.isPlainObject(subschema.properties)) {
 			throw new SchemaError('Object in schema must have properties field');
 		}
@@ -53,7 +55,8 @@ class SchemaTypeObject extends SchemaType {
 		return subschema;
 	}
 
-	traverse(value, subschema, field, handlers, schema) {
+
+	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
 		for (let prop in subschema.properties) {
 			schema._traverseSubschemaValue(
 				value[prop],
@@ -74,7 +77,8 @@ class SchemaTypeObject extends SchemaType {
 		}
 	}
 
-	transform(value, subschema, field, handlers, schema) {
+
+	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
 		for (let prop in subschema.properties) {
 			let newValue = schema._transformSubschemaValue(
 				value[prop],
@@ -106,7 +110,8 @@ class SchemaTypeObject extends SchemaType {
 		return value;
 	}
 
-	transformAsync(value, subschema, field, handlers, schema) {
+
+	transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
 		return Promise.all(_.map(_.union(_.keys(subschema.properties), _.keys(value)), function(prop) {
 			return schema._transformSubschemaValueAsync(
 				value[prop],
@@ -123,22 +128,23 @@ class SchemaTypeObject extends SchemaType {
 		})).then( () => value );
 	}
 
-	validate(value) {
+
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 		if (!objtools.isPlainObject(value)) {
 			throw new FieldError('invalid_type', 'Must be an object');
 		}
 	}
 
-	normalize(value, subschema, field, options, schema) {
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
 		this.validate(value, subschema, field, options, schema);
 		return value;
 	}
 
-	checkTypeMatch(value) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		return (objtools.isPlainObject(value) ? 1 : 0);
 	}
 
-	toJSONSchema(subschema, schema) {
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
 		let properties = {};
 		let required = [];
 		for (let key in (subschema.properties || [])) {
@@ -147,7 +153,7 @@ class SchemaTypeObject extends SchemaType {
 				required.push(key);
 			}
 		}
-		let jsonSchema = {
+		let jsonSchema: any = {
 			type: 'object',
 			properties
 		};
@@ -156,19 +162,18 @@ class SchemaTypeObject extends SchemaType {
 	}
 
 }
-exports.SchemaTypeObject = SchemaTypeObject;
 
-class SchemaTypeArray extends SchemaType {
+export class SchemaTypeArray extends SchemaType {
 
-	constructor(name) {
+	constructor(name: string = 'array') {
 		super(name || 'array');
 	}
 
-	matchShorthandType(subschema) {
+	matchShorthandType(subschema: any): boolean {
 		return (Array.isArray(subschema) && subschema.length === 1);
 	}
 
-	traverseSchema(subschema, path, rawPath, handlers, schema, options) {
+	traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
 		let newPath;
 		let newRawPath = rawPath ? (rawPath + '.elements') : 'elements';
 		if (options.includePathArrays) {
@@ -185,12 +190,12 @@ class SchemaTypeArray extends SchemaType {
 		);
 	}
 
-	getFieldSubschema(subschema, pathComponent, schema) {
+	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
 		// We include the extra values here so this function can work with various standard
 		// array index placeholders.  If used to index into an actual array object, they'll
 		// return undefined.
 		if (
-			!isNaN(pathComponent) ||
+			/^[0-9]+$/.test(pathComponent) ||
 			pathComponent === '$' ||
 			pathComponent === '#' ||
 			pathComponent === '_' ||
@@ -202,7 +207,7 @@ class SchemaTypeArray extends SchemaType {
 		}
 	}
 
-	normalizeSchema(subschema, schema) {
+	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
 		if (!subschema.elements) {
 			throw new SchemaError('Array schema must have elements field');
 		}
@@ -210,14 +215,14 @@ class SchemaTypeArray extends SchemaType {
 		return subschema;
 	}
 
-	normalizeShorthandSchema(subschema, schema) {
+	normalizeShorthandSchema(subschema: any, schema: Schema): SubschemaType {
 		if (this.matchShorthandType(subschema.type)) {
 			subschema.elements = subschema.type[0];
 		}
 		return subschema;
 	}
 
-	traverse(value, subschema, field, handlers, schema) {
+	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
 		for (let i = 0; i < value.length; i++) {
 			schema._traverseSubschemaValue(
 				value[i],
@@ -228,8 +233,8 @@ class SchemaTypeArray extends SchemaType {
 		}
 	}
 
-	transform(value, subschema, field, handlers, schema) {
-		let hasDeletions = false;
+	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
+		let hasDeletions: boolean = false;
 		for (let i = 0; i < value.length; i++) {
 			value[i] = schema._transformSubschemaValue(
 				value[i],
@@ -248,7 +253,7 @@ class SchemaTypeArray extends SchemaType {
 		}
 	}
 
-	transformAsync(value, subschema, field, handlers, schema) {
+	transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
 		let hasDeletions = false;
 		return Promise.all(_.map(value, function(elem, i) {
 			return schema._transformSubschemaValueAsync(
@@ -271,7 +276,7 @@ class SchemaTypeArray extends SchemaType {
 		});
 	}
 
-	validate(value) {
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 		if (!_.isArray(value)) {
 			throw new FieldError('invalid_type', 'Must be an array');
 		}
@@ -282,16 +287,17 @@ class SchemaTypeArray extends SchemaType {
 		}
 	}
 
-	normalize(value, subschema, field, options, schema) {
+
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
 		this.validate(value, subschema, field, options, schema);
 		return value;
 	}
 
-	checkTypeMatch(value) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		return (_.isArray(value) ? 1 : 0);
 	}
 
-	toJSONSchema(subschema, schema) {
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
 		return {
 			type: 'array',
 			items: schema._subschemaToJSONSchema(subschema.elements)
@@ -299,21 +305,20 @@ class SchemaTypeArray extends SchemaType {
 	}
 
 }
-exports.SchemaTypeArray = SchemaTypeArray;
 
-class SchemaTypeMap extends SchemaType {
+export class SchemaTypeMap extends SchemaType {
 
-	constructor(name) {
+	constructor(name: string = 'map') {
 		super(name || 'map');
 	}
 
-	matchShorthandType(subschema) {
+	matchShorthandType(subschema: any): boolean {
 		return false;
 	}
 
-	traverseSchema(subschema, path, rawPath, handlers, schema, options) {
-		let newPath;
-		let newRawPath = rawPath ? (rawPath + '.values') : 'values';
+	traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
+		let newPath: string;
+		let newRawPath: string = rawPath ? (rawPath + '.values') : 'values';
 		if (options.includePathArrays) {
 			newPath = path ? (path + '.$') : '$';
 		} else {
@@ -328,11 +333,11 @@ class SchemaTypeMap extends SchemaType {
 		);
 	}
 
-	getFieldSubschema(subschema, pathComponent, schema) {
+	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
 		return subschema.values;
 	}
 
-	normalizeSchema(subschema, schema) {
+	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
 		if (!subschema.values) {
 			throw new SchemaError('Map schema must have values field');
 		}
@@ -340,7 +345,7 @@ class SchemaTypeMap extends SchemaType {
 		return subschema;
 	}
 
-	traverse(value, subschema, field, handlers, schema) {
+	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
 		for (let prop in value) {
 			schema._traverseSubschemaValue(
 				value[prop],
@@ -351,7 +356,7 @@ class SchemaTypeMap extends SchemaType {
 		}
 	}
 
-	transform(value, subschema, field, handlers, schema) {
+	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
 		for (let prop in value) {
 			let newValue = schema._transformSubschemaValue(
 				value[prop],
@@ -368,7 +373,7 @@ class SchemaTypeMap extends SchemaType {
 		return value;
 	}
 
-	transformAsync(value, subschema, field, handlers, schema) {
+	transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
 		return Promise.all(_.map(_.keys(value), function(prop) {
 			return schema._transformSubschemaValueAsync(
 				value[prop],
@@ -385,22 +390,22 @@ class SchemaTypeMap extends SchemaType {
 		})).then( () => value );
 	}
 
-	validate(value) {
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 		if (!objtools.isPlainObject(value)) {
 			throw new FieldError('invalid_type', 'Must be an object');
 		}
 	}
 
-	normalize(value, subschema, field, options, schema) {
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
 		this.validate(value, subschema, field, options, schema);
 		return value;
 	}
 
-	checkTypeMatch(value) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		return (objtools.isPlainObject(value) ? 1 : 0);
 	}
 
-	toJSONSchema(subschema, schema) {
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
 		return {
 			type: 'object',
 			patternProperties: {
@@ -409,19 +414,18 @@ class SchemaTypeMap extends SchemaType {
 		};
 	}
 }
-exports.SchemaTypeMap = SchemaTypeMap;
 
-class SchemaTypeOr extends SchemaType {
+export class SchemaTypeOr extends SchemaType {
 
-	constructor(name) {
+	constructor(name: string = 'or') {
 		super(name || 'or');
 	}
 
-	matchShorthandType(subschema) {
+	matchShorthandType(subschema: any): boolean {
 		return false;
 	}
 
-	traverseSchema(subschema, path, rawPath, handlers, schema, options) {
+	traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
 		for (let alt of subschema.alternatives) {
 			schema._traverseSubschema(
 				alt,
@@ -433,7 +437,7 @@ class SchemaTypeOr extends SchemaType {
 		}
 	}
 
-	getFieldSubschema(subschema, pathComponent, schema) {
+	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
 		// We don't have a whole lot of information to go off of here, so just return the
 		// first alternative that returns a non-undefined subschema.
 		for (let alt of subschema.alternatives) {
@@ -446,7 +450,7 @@ class SchemaTypeOr extends SchemaType {
 		return undefined;
 	}
 
-	normalizeSchema(subschema, schema) {
+	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
 		if (!Array.isArray(subschema.alternatives)) {
 			throw new SchemaError('Or schema must have alternatives field');
 		}
@@ -459,7 +463,7 @@ class SchemaTypeOr extends SchemaType {
 		return subschema;
 	}
 
-	traverse(value, subschema, field, handlers, schema) {
+	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
 		let altSchema = this._matchAlternative(value, subschema, schema);
 		schema._traverseSubschemaValue(
 			value,
@@ -469,7 +473,7 @@ class SchemaTypeOr extends SchemaType {
 		);
 	}
 
-	transform(value, subschema, field, handlers, schema) {
+	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
 		let altSchema = this._matchAlternative(value, subschema, schema);
 		let newValue = schema._transformSubschemaValue(
 			value,
@@ -480,7 +484,7 @@ class SchemaTypeOr extends SchemaType {
 		return newValue;
 	}
 
-	transformAsync(value, subschema, field, handlers, schema) {
+	transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
 		let altSchema = this._matchAlternative(value, subschema, schema);
 		return schema._transformSubschemaValueAsync(
 			value,
@@ -491,10 +495,10 @@ class SchemaTypeOr extends SchemaType {
 	}
 
 	// Returns the subschema that best matches
-	_matchAlternative(value, subschema, schema) {
+	_matchAlternative(value: any, subschema: SubschemaType, schema: Schema) {
 		// Get types and type match values for each alternative, and group by
 		// type match value.
-		let alternativesByTypeMatch = {
+		let alternativesByTypeMatch: { [matchLevel: string]: SubschemaType[] } = {
 			0: [],
 			1: [],
 			2: [],
@@ -506,7 +510,7 @@ class SchemaTypeOr extends SchemaType {
 			alternativesByTypeMatch[typeMatch].push(alt);
 		}
 		// Find the best matching alternative.
-		let tiebreakers;
+		let tiebreakers: SubschemaType[];
 		for (let i = 3; i > 0; i--) {
 			if (alternativesByTypeMatch[i].length === 1) {
 				return alternativesByTypeMatch[i][0];
@@ -560,9 +564,9 @@ class SchemaTypeOr extends SchemaType {
 		return tiebreakers[0];
 	}
 
-	checkTypeMatch(value, subschema, schema) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		// Find the max match value of any of the alternatives
-		let maxTypeMatch = 0;
+		let maxTypeMatch: 0 | 1 | 2 | 3 = 0;
 		for (let alt of subschema.alternatives) {
 			let type = schema._getType(alt.type);
 			let typeMatch = type.checkTypeMatch(value, alt, schema);
@@ -573,7 +577,7 @@ class SchemaTypeOr extends SchemaType {
 		return maxTypeMatch;
 	}
 
-	toJSONSchema(subschema, schema) {
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
 		let alternatives = [];
 
 		subschema.alternatives.forEach(function(alternative) {
@@ -586,44 +590,44 @@ class SchemaTypeOr extends SchemaType {
 	}
 
 }
-exports.SchemaTypeOr = SchemaTypeOr;
 
-class SchemaTypePrimitive extends SchemaType {
+export class SchemaTypePrimitive extends SchemaType {
+	_shorthands: any[];
 
-	constructor(name, shorthands) {
+	constructor(name: string, shorthands: any[] = null) {
 		super(name);
 		this._shorthands = shorthands || [];
 	}
 
-	getFieldSubschema(subschema, pathComponent, schema) {
+	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
 		return undefined;
 	}
 
-	matchShorthandType(subschema) {
+	matchShorthandType(subschema: any): boolean {
 		return this._shorthands.indexOf(subschema) !== -1;
 	}
 
-	normalizeShorthandSchema(subschema, schema) {
+	normalizeShorthandSchema(subschema: any, schema: Schema): SubschemaType {
 		return subschema;
 	}
 
-	normalizeSchema(subschema) {
+	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
 		return subschema;
 	}
 
-	validate(...args) {
-		this.normalize(...args);
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
+		this.normalize(value, subschema, field, options, schema);
 	}
 
 }
 
-class SchemaTypeString extends SchemaTypePrimitive {
+export class SchemaTypeString extends SchemaTypePrimitive {
 
-	constructor(name) {
+	constructor(name: string = 'string') {
 		super(name || 'string', [ String ]);
 	}
 
-	normalizeSchema(subschema, schema) {
+	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
 		subschema = super.normalizeSchema(subschema, schema);
 		if (subschema.match instanceof RegExp) {
 			subschema.match = subschema.match.toString().slice(1, -1);
@@ -631,7 +635,7 @@ class SchemaTypeString extends SchemaTypePrimitive {
 		return subschema;
 	}
 
-	normalize(value, subschema) {
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
 		let strValue = '' + value;
 		if (typeof subschema.maxLength === 'number' && strValue.length > subschema.maxLength) {
 			throw new FieldError('too_long', subschema.maxLengthError || 'String is too long');
@@ -649,14 +653,14 @@ class SchemaTypeString extends SchemaTypePrimitive {
 		return strValue;
 	}
 
-	validate(value, ...args) {
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 		if (typeof value !== 'string') {
 			throw new FieldError('invalid_type', 'Must be a string');
 		}
-		super.validate(value, ...args);
+		super.validate(value, subschema, field, options, schema);
 	}
 
-	checkTypeMatch(value) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		if (typeof value === 'string') {
 			return 3;
 		} else if (!value || typeof value !== 'object') {
@@ -666,7 +670,7 @@ class SchemaTypeString extends SchemaTypePrimitive {
 		}
 	}
 
-	toJSONSchema(subschema) {
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
 		let jsonSchema = {
 			type: 'string',
 			minLength: subschema.minLength,
@@ -680,17 +684,17 @@ class SchemaTypeString extends SchemaTypePrimitive {
 	}
 
 }
-exports.SchemaTypeString = SchemaTypeString;
 
-class SchemaTypeNumber extends SchemaTypePrimitive {
+export class SchemaTypeNumber extends SchemaTypePrimitive {
 
-	constructor(name) {
+	constructor(name: string = 'number') {
 		super(name || 'number', [ Number ]);
 	}
 
-	normalize(value, subschema) {
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
 		if (typeof value !== 'number') {
 			if (typeof value === 'string') {
+				// @ts-ignore
 				if (!value || isNaN(value)) {
 					throw new FieldError('invalid_type', 'Must be a number');
 				}
@@ -710,16 +714,17 @@ class SchemaTypeNumber extends SchemaTypePrimitive {
 		return value;
 	}
 
-	validate(value, ...args) {
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 		if (typeof value !== 'number') {
 			throw new FieldError('invalid_type', 'Must be a number');
 		}
-		super.validate(value, ...args);
+		super.validate(value, subschema, field, options, schema);
 	}
 
-	checkTypeMatch(value) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		if (typeof value === 'number') {
 			return 3;
+		// @ts-ignore
 		} else if (typeof value === 'string' && value && !isNaN(value)) {
 			return 2;
 		} else {
@@ -727,7 +732,7 @@ class SchemaTypeNumber extends SchemaTypePrimitive {
 		}
 	}
 
-	toJSONSchema(subschema) {
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
 		let jsonSchema = {
 			type: 'number',
 			minimum: subschema.minimum,
@@ -740,15 +745,14 @@ class SchemaTypeNumber extends SchemaTypePrimitive {
 	}
 
 }
-exports.SchemaTypeNumber = SchemaTypeNumber;
 
-class SchemaTypeDate extends SchemaTypePrimitive {
+export class SchemaTypeDate extends SchemaTypePrimitive {
 
-	constructor(name) {
+	constructor(name: string = 'date') {
 		super(name || 'date', [ Date ]);
 	}
 
-	normalizeSchema(subschema, schema) {
+	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
 		subschema = super.normalizeSchema(subschema, schema);
 		if (subschema.default === Date.now) {
 			subschema.default = () => new Date();
@@ -768,7 +772,7 @@ class SchemaTypeDate extends SchemaTypePrimitive {
 		return subschema;
 	}
 
-	_toDate(value) {
+	_toDate(value: any): Date {
 		if (!_.isDate(value)) {
 			if (typeof value === 'string') {
 				value = new Date(value);
@@ -784,7 +788,7 @@ class SchemaTypeDate extends SchemaTypePrimitive {
 		return value;
 	}
 
-	normalize(value, subschema, field, options) {
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
 		value = this._toDate(value);
 		if (value === null) {
 			throw new FieldError('invalid_type', 'Must be a date');
@@ -798,14 +802,14 @@ class SchemaTypeDate extends SchemaTypePrimitive {
 		return value;
 	}
 
-	validate(value, ...args) {
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 		if (!_.isDate(value)) {
 			throw new FieldError('invalid_type', 'Must be a date');
 		}
-		super.validate(value, ...args);
+		super.validate(value, subschema, field, options, schema);
 	}
 
-	checkTypeMatch(value) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		if (_.isDate(value)) {
 			return 3;
 		} else if (this._toDate(value)) {
@@ -815,7 +819,7 @@ class SchemaTypeDate extends SchemaTypePrimitive {
 		}
 	}
 
-	toJSONSchema(subschema) {
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
 		return {
 			type: 'string',
 			pattern: '^\d{4}(-\d\d(-\d\d(T\d\d:\d\d(:\d\d)?(\.\d+)?(([+-]\d\d:\d\d)|Z)?)?)?)?$'
@@ -823,15 +827,14 @@ class SchemaTypeDate extends SchemaTypePrimitive {
 	}
 
 }
-exports.SchemaTypeDate = SchemaTypeDate;
 
-class SchemaTypeBinary extends SchemaTypePrimitive {
+export class SchemaTypeBinary extends SchemaTypePrimitive {
 
-	constructor(name) {
+	constructor(name: string = 'binary') {
 		super(name || 'binary', [ Buffer ]);
 	}
 
-	normalize(value, subschema, field, options) {
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
 		if (!(value instanceof Buffer)) {
 			if (typeof value === 'string') {
 				if (/[^a-z0-9+\/=]/i.test(value)) {
@@ -856,14 +859,14 @@ class SchemaTypeBinary extends SchemaTypePrimitive {
 		return value;
 	}
 
-	validate(value, ...args) {
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 		if (!(value instanceof Buffer)) {
 			throw new FieldError('invalid_type', 'Must be a buffer');
 		}
-		super.validate(value, ...args);
+		super.validate(value, subschema, field, options, schema);
 	}
 
-	checkTypeMatch(value) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		if (value instanceof Buffer) {
 			return 3;
 		} else if (Array.isArray(value) && _.every(value, _.isNumber)) {
@@ -875,16 +878,17 @@ class SchemaTypeBinary extends SchemaTypePrimitive {
 		}
 	}
 
-	toJSONSchema() {
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
 		return { type: 'string' };
 	}
 
 }
-exports.SchemaTypeBinary = SchemaTypeBinary;
 
-class SchemaTypeBoolean extends SchemaTypePrimitive {
+export class SchemaTypeBoolean extends SchemaTypePrimitive {
+	trueStringSet: any;
+	falseStringSet: any;
 
-	constructor(name) {
+	constructor(name: string = 'boolean') {
 		super(name || 'boolean', [ Boolean ]);
 		this.trueStringSet = {
 			'true': 1,
@@ -906,7 +910,7 @@ class SchemaTypeBoolean extends SchemaTypePrimitive {
 		};
 	}
 
-	normalize(value, subschema) {
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
 		if (value === true || value === false) {
 			return value;
 		} else if (value === 0 || value === 1) {
@@ -923,14 +927,14 @@ class SchemaTypeBoolean extends SchemaTypePrimitive {
 		throw new FieldError('invalid_type', 'Must be boolean');
 	}
 
-	validate(value, ...args) {
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 		if (value !== false && value !== true) {
 			throw new FieldError('invalid_type', 'Must be a boolean');
 		}
-		super.validate(value, ...args);
+		super.validate(value, subschema, field, options, schema);
 	}
 
-	checkTypeMatch(value) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		if (value === true || value === false) {
 			return 3;
 		} else if (value === 0 || value === 1) {
@@ -945,26 +949,25 @@ class SchemaTypeBoolean extends SchemaTypePrimitive {
 		}
 	}
 
-	toJSONSchema() {
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
 		return { type: 'boolean' };
 	}
 
 }
-exports.SchemaTypeBoolean = SchemaTypeBoolean;
 
-class SchemaTypeMixed extends SchemaTypePrimitive {
+export class SchemaTypeMixed extends SchemaTypePrimitive {
 
-	constructor(name) {
+	constructor(name: string = 'mixed') {
 		super(name || 'mixed', [ Mixed ]);
 	}
 
-	getFieldSubschema(subschema, pathComponent, schema) {
+	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): SubschemaType {
 		return {
 			type: 'mixed'
 		};
 	}
 
-	normalize(value, subschema, field, options = {}) {
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
 		if (subschema.serializeMixed) {
 			if (options.serialize) {
 				if (typeof value === 'string') {
@@ -983,13 +986,12 @@ class SchemaTypeMixed extends SchemaTypePrimitive {
 		return value;
 	}
 
-	checkTypeMatch(value) {
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
 		return 0;
 	}
 
-	toJSONSchema() {
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
 		return { type: 'string' };
 	}
 
 }
-exports.SchemaTypeMixed = SchemaTypeMixed;

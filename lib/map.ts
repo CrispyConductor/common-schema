@@ -1,8 +1,5 @@
-// Copyright 2016 Zipscene, LLC
-// Licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-
-let objtools = require('objtools');
+import * as objtools from 'objtools';
+import { SubschemaType } from './schema.js';
 
 /**
  * Generates a subschema that's a map type.
@@ -20,7 +17,7 @@ let objtools = require('objtools');
  * @param {Mixed} valueSchema - Schema for values
  * @return {Object} The `map` type subschema.
  */
-function map(schema, valueSchema) {
+export function map(schema: any = {}, valueSchema: any = {}): SubschemaType {
 	if (!objtools.isPlainObject(schema)) {
 		valueSchema = schema;
 		schema = {};
@@ -30,4 +27,3 @@ function map(schema, valueSchema) {
 	return schema;
 }
 
-module.exports = map;
