@@ -119,6 +119,15 @@ export abstract class SchemaType {
 	}
 
 	/**
+	 * Returns a list of [ subfield, subfieldValue ] entries in an object.
+	 *
+	 * @method listValueSubfieldEntries
+	 */
+	listValueSubfieldEntries(value: any, subschema: SubschemaType, schema: Schema): [ string, any ][] {
+		return this.listValueSubfields(value, subschema, schema).map((subfield: string) => [ subfield, this.getValueSubfield(value, subschema, subfield, schema) ]);
+	}
+
+	/**
 	 * Returns the value at one subfield of this value.
 	 *
 	 * @method getValueSubfield
@@ -132,6 +141,12 @@ export abstract class SchemaType {
 	}
 
 	setValueSubfield(value: any, subschema: SubschemaType, field: string, fieldValue: any, schema: Schema): void {
+	}
+
+	setValueSubfieldBatch(value: any, subschema: SubschemaType, newValues: { [subfield: string]: any }, schema: Schema): void {
+		for (let key in newValues) {
+			this.setValueSubfield(value, subschema, key, newValues[key], schema);
+		}
 	}
 
 	/**
@@ -177,8 +192,7 @@ export abstract class SchemaType {
 	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
 		if (this.isContainer) {
 			let subfieldSet: Set<string> = new Set();
-			for (let subfield of this.listValueSubfields(value, subschema, schema)) {
-				let subvalue = this.getValueSubfield(value, subschema, subfield, schema);
+			for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
 				let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
 				subfieldSet.add(subfield);
 				schema._traverseSubschemaValue(
@@ -191,7 +205,8 @@ export abstract class SchemaType {
 			if (this.containerSchemaKeysMatchValueKeys) {
 				for (let subfield of this.listSchemaSubfields(subschema, schema)) {
 					if (!subfieldSet.has(subfield)) {
-						let subvalue = this.getValueSubfield(value, subschema, subfield, schema);
+						//let subvalue = this.getValueSubfield(value, subschema, subfield, schema);
+						let subvalue = undefined;
 						let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
 						subfieldSet.add(subfield);
 						schema._traverseSubschemaValue(
@@ -222,8 +237,7 @@ export abstract class SchemaType {
 	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
 		if (this.isContainer && value) {
 			let subfieldSet: Set<string> = new Set();
-			for (let subfield of this.listValueSubfields(value, subschema, schema)) {
-				let subvalue = this.getValueSubfield(value, subschema, subfield, schema);
+			for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
 				let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
 				let newValue = schema._transformSubschemaValue(
 					subvalue,
@@ -237,7 +251,8 @@ export abstract class SchemaType {
 			if (this.containerSchemaKeysMatchValueKeys) {
 				for (let subfield of this.listSchemaSubfields(subschema, schema)) {
 					if (!subfieldSet.has(subfield)) {
-						let subvalue = this.getValueSubfield(value, subschema, subfield, schema);
+						//let subvalue = this.getValueSubfield(value, subschema, subfield, schema);
+						let subvalue = undefined;
 						let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
 						let newValue = schema._transformSubschemaValue(
 							subvalue,
@@ -270,8 +285,7 @@ export abstract class SchemaType {
 	async transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
 		if (this.isContainer && value) {
 			let subfieldSet: Set<string> = new Set();
-			for (let subfield of this.listValueSubfields(value, subschema, schema)) {
-				let subvalue = this.getValueSubfield(value, subschema, subfield, schema);
+			for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
 				let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
 				let newValue = await schema._transformSubschemaValueAsync(
 					subvalue,
@@ -283,9 +297,12 @@ export abstract class SchemaType {
 				this.setValueSubfield(value, subschema, subfield, newValue, schema);
 			}
 			if (this.containerSchemaKeysMatchValueKeys) {
+				let newValueBatch = {};
+				let changeCount = 0;
 				for (let subfield of this.listSchemaSubfields(subschema, schema)) {
 					if (!subfieldSet.has(subfield)) {
-						let subvalue = this.getValueSubfield(value, subschema, subfield, schema);
+						//let subvalue = this.getValueSubfield(value, subschema, subfield, schema);
+						let subvalue = undefined;
 						let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
 						let newValue = await schema._transformSubschemaValueAsync(
 							subvalue,
@@ -294,8 +311,13 @@ export abstract class SchemaType {
 							handlers
 						);
 						subfieldSet.add(subfield);
-						this.setValueSubfield(value, subschema, subfield, newValue, schema);
+						//this.setValueSubfield(value, subschema, subfield, newValue, schema);
+						newValueBatch[subfield] = newValue;
+						changeCount++;
 					}
+				}
+				if (changeCount > 0) {
+					this.setValueSubfieldBatch(value, subschema, newValueBatch, schema);
 				}
 			}
 			return value;
