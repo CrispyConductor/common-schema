@@ -249,6 +249,8 @@ export abstract class SchemaType {
 				this.setValueSubfield(value, subschema, subfield, newValue, schema);
 			}
 			if (this.containerSchemaKeysMatchValueKeys) {
+				let newValueBatch = {};
+				let changeCount = 0;
 				for (let subfield of this.listSchemaSubfields(subschema, schema)) {
 					if (!subfieldSet.has(subfield)) {
 						//let subvalue = this.getValueSubfield(value, subschema, subfield, schema);
@@ -261,8 +263,13 @@ export abstract class SchemaType {
 							handlers
 						);
 						subfieldSet.add(subfield);
-						this.setValueSubfield(value, subschema, subfield, newValue, schema);
+						//this.setValueSubfield(value, subschema, subfield, newValue, schema);
+						newValueBatch[subfield] = newValue;
+						changeCount++;
 					}
+				}
+				if (changeCount > 0) {
+					this.setValueSubfieldBatch(value, subschema, newValueBatch, schema);
 				}
 			}
 			return value;
