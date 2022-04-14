@@ -367,6 +367,170 @@ export class SchemaTypeArray extends SchemaType {
 
 }
 
+
+/**
+ * This schema type is a variant of an array that actually represents a set/map of unique items.
+ * In paths, this is represented as a string key (matching the value) instead of an array index.
+ *
+ * Schemas look like this:
+ * {
+ * 	type: 'arrayset',
+ * 	elements: <Subschema for Elements>,
+ * 	keyField: <Subfield within elements to get unique key; defaults to whole element>
+ * }
+ */
+export class SchemaTypeArraySet extends SchemaType {
+
+	
+	constructor(name: string = 'arrayset') {
+		super(name, true, false);
+	}
+
+	matchShorthandType(subschema: any): boolean {
+		return false;
+	}
+
+	getFieldSubschemaPath(subschema: SubschemaType, field: string, schema: Schema): string {
+		return 'elements';
+	}
+
+	listSchemaSubfields(subschema: SubschemaType, schema: Schema): string[] {
+		return [ '$' ];
+	}
+
+	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
+		return subschema.elements;
+	}
+
+	// Return a unique key string used to index the element based on keyField
+	_getElementKey(elementValue: any, subschema: SubschemaType, schema: Schema, throwOnUndefined: boolean = false): string | undefined {
+		const encodeValue = (v: any): string | undefined => {
+			if (v === undefined) return undefined;
+			if (Array.isArray(v)) {
+				return v.map(encodeValue).join('$');
+			} else if (objtools.isScalar(v)) {
+				return String(v);
+			} else {
+				return objtools.objectHash(v);
+			}
+		};
+		let r: any;
+		if (subschema.keyField && Array.isArray(subschema.keyField)) {
+			r = encodeValue(subschema.keyField.map((f: string) => objtools.getPath(elementValue, f)));
+		} else if (subschema.keyField) {
+			r = encodeValue(objtools.getPath(elementValue, subschema.keyField));
+		} else {
+			r = encodeValue(elementValue);
+		}
+		if (r === undefined && throwOnUndefined) {
+			throw new SchemaError('ArraySet element key does not exist');
+		}
+		return r;
+	}
+
+	listValueSubfields(value: any, subschema: SubschemaType, schema: Schema): string[] {
+		let ret: string[] = [];
+		if (Array.isArray(value)) {
+			for (let el of value) {
+				ret.push(this._getElementKey(el, subschema, schema, true));
+			}
+			return _.uniq(ret);
+		}
+		return ret;
+	}
+
+
+	listValueSubfieldEntries(value: any, subschema: SubschemaType, schema: Schema): [ string, any ][] {
+		let retMap: Map<string, any> = new Map();
+		if (Array.isArray(value)) {
+			for (let el of value) {
+				retMap.set(this._getElementKey(el, subschema, schema, true), el);
+			}
+			let retAr: [ string, any ][] = [];
+			for (let [ k, v ] of retMap.entries()) {
+				retAr.push([ k, v ]);
+			}
+			return retAr;
+		}
+		return [];
+	}
+
+	setValueSubfieldBatch(value: any, subschema: SubschemaType, newValues: { [subfield: string]: any }, schema: Schema): void {
+		let keyToIndexMap: Map<string, number> = new Map();
+		for (let i = 0; i < value.length; i++) {
+			let key: string = this._getElementKey(value[i], subschema, schema, true);
+			keyToIndexMap.set(key, i);
+		}
+		for (let newValue of newValues.values()) {
+			// note: ignore given key for value and recalculate it ourselves
+			let key: string = this._getElementKey(newValue, subschema, schema, true);
+			if (keyToIndexMap.has(key)) {
+				value[keyToIndexMap.get(key)] = newValue;
+			} else {
+				value.push(newValue);
+			}
+		}
+	}
+
+	getValueSubfield(value: any, subschema: SubschemaType, field: string, schema: Schema): any {
+		for (let el of value) {
+			if (this._getElementKey(el, subschema, schema) === field) {
+				return value;
+			}
+		}
+		return undefined;
+	}
+
+	setValueSubfield(value: any, subschema: SubschemaType, field: string, fieldValue: any, schema: Schema): void {
+		for (let i = 0; i < value.length; i++) {
+			if (this._getElementKey(value[i], subschema, schema) === field) {
+				value[i] = fieldValue;
+				return;
+			}
+		}
+		value.push(fieldValue);
+	}
+
+	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
+		if (!subschema.elements) {
+			throw new SchemaError('ArraySet schema must have elements field');
+		}
+		subschema.elements = schema._normalizeSubschema(subschema.elements);
+		return subschema;
+	}
+
+	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
+		if (!_.isArray(value)) {
+			throw new FieldError('invalid_type', 'Must be an array');
+		}
+		for (let elem of value) {
+			if (elem === undefined) {
+				throw new FieldError('invalid', 'Arrays may not contain undefined elements');
+			}
+			if (this._getElementKey(elem, subschema, schema) === undefined) {
+				throw new FieldError('invalid', 'ArraySet element has no key');
+			}
+		}
+	}
+
+	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
+		this.validate(value, subschema, field, options, schema);
+		return value;
+	}
+
+	checkTypeMatch(value: any, subschema: SubschemaType, schema: Schema): 0 | 1 | 2 | 3 {
+		return (_.isArray(value) ? 1 : 0);
+	}
+
+	toJSONSchema(subschema: SubschemaType, schema: Schema): any {
+		return {
+			type: 'array',
+			items: schema._subschemaToJSONSchema(subschema.elements)
+		};
+	}
+
+}
+
 export class SchemaTypeMap extends SchemaType {
 
 	constructor(name: string = 'map') {

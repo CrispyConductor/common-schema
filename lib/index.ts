@@ -9,6 +9,7 @@ export { SchemaError } from './schema-error.js';
 export { Mixed } from './mixed.js';
 export { or } from './or.js';
 export { map } from './map.js';
+export * from './core-schema-types.js';
 
 import { SchemaFactory } from './schema-factory.js';
 import { SchemaOptions, Schema } from './schema.js';
