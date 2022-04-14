@@ -13,12 +13,12 @@ import { Schema, SchemaTraverseHandlers, SchemaTraverseOptions, TraverseHandlers
  */
 export abstract class SchemaType {
 	_typeName: string;
-	isContainer: boolean;
+	_defaultIsContainer: boolean;
 	containerSchemaKeysMatchValueKeys: boolean;
 
 	constructor(name: string, isContainer: boolean, containerSchemaKeysMatchValueKeys: boolean = false) {
 		this._typeName = name;
-		this.isContainer = isContainer;
+		this._defaultIsContainer = isContainer;
 		this.containerSchemaKeysMatchValueKeys = containerSchemaKeysMatchValueKeys;
 	}
 
@@ -30,6 +30,19 @@ export abstract class SchemaType {
 	 */
 	getName(): string {
 		return this._typeName;
+	}
+
+	/**
+	 * Returns whether or not this value is a container type.  Usually this will just return whether
+	 * or not the schema itself represents a container type, but can be overridden for complex types
+	 * where whether or not the value is a container depends on the value.
+	 *
+	 * If undefined is passed for the value, return the default for the schema.
+	 *
+	 * @method isContainer
+	 */
+	isContainer(value: any, subschema: SubschemaType, schema: Schema): boolean {
+		return this._defaultIsContainer;
 	}
 
 	/**
@@ -55,7 +68,7 @@ export abstract class SchemaType {
 	 * @param {Object} options
 	 */
 	traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
-		if (this.isContainer) {
+		if (this.isContainer(undefined, subschema, schema)) {
 			for (let subfield of this.listSchemaSubfields(subschema, schema)) {
 				let subschemaPathPart = this.getFieldSubschemaPath(subschema, subfield, schema);
 				schema._traverseSubschema(
@@ -190,7 +203,7 @@ export abstract class SchemaType {
 	 * @param {Schema} schema - Root schema object.
 	 */
 	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
-		if (this.isContainer) {
+		if (this.isContainer(value, subschema, schema)) {
 			let subfieldSet: Set<string> = new Set();
 			for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
 				let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
@@ -235,7 +248,7 @@ export abstract class SchemaType {
 	 * @return {Mixed} New value for field (usually should be the same as value)
 	 */
 	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
-		if (this.isContainer && value) {
+		if (this.isContainer(value, subschema, schema) && value) {
 			let subfieldSet: Set<string> = new Set();
 			for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
 				let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
@@ -290,7 +303,7 @@ export abstract class SchemaType {
 	 * @return {Promise} - Resolve with new value for field
 	 */
 	async transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
-		if (this.isContainer && value) {
+		if (this.isContainer(value, subschema, schema) && value) {
 			let subfieldSet: Set<string> = new Set();
 			for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
 				let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
