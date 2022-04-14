@@ -35,7 +35,7 @@ describe('Schema', function() {
 	});
 
 	it('#listFields no stopAtArrays', function() {
-		const expected = [ 'foo', 'bar', 'baz', 'baz.biz', 'baz.biz.buz', 'arr', 'arr.zip' ];
+		const expected = [ 'foo', 'bar', 'bar.$', 'baz', 'baz.biz', 'baz.biz.buz', 'arr', 'arr.$', 'arr.$.zip' ];
 		const actual = testSchema1.listFields({ stopAtArrays: false  });
 		expect(actual).to.deep.equal(expected);
 	});

@@ -49,7 +49,7 @@ export class SchemaTypeGeoPoint extends SchemaType {
 	_numberType: SchemaTypeNumber;
 
 	constructor(name) {
-		super(name || 'geopoint');
+		super(name || 'geopoint', false);
 		this._numberType = new SchemaTypeNumber();
 	}
 
@@ -82,7 +82,7 @@ export class SchemaTypeGeoJSON extends SchemaType {
 	_geoTypeSchemas: any;
 
 	constructor(name) {
-		super(name || 'geojson');
+		super(name || 'geojson', false);
 		// Store schema objects that correspond to the different geojson types
 		// It has to be done this way because of circular reference issues ...
 		// This is a mapping from string type names to schemas for the type

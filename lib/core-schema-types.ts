@@ -11,14 +11,14 @@ import { SubschemaType, Schema, SchemaTraverseHandlers, SchemaTraverseOptions, T
 export class SchemaTypeObject extends SchemaType {
 
 	constructor(name: string = 'object') {
-		super(name || 'object');
+		super(name || 'object', true, true);
 	}
 
 	matchShorthandType(subschema: any): boolean {
 		return objtools.isPlainObject(subschema);
 	}
 
-	traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
+	/*traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
 		for (let prop in subschema.properties) {
 			schema._traverseSubschema(
 				subschema.properties[prop],
@@ -28,12 +28,11 @@ export class SchemaTypeObject extends SchemaType {
 				options
 			);
 		}
-	}
+	}*/
 
 
 	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
-		schema;
-		return subschema.properties[pathComponent];
+		return subschema.properties[pathComponent] || undefined;
 	}
 
 
@@ -55,8 +54,41 @@ export class SchemaTypeObject extends SchemaType {
 		return subschema;
 	}
 
+	listSchemaSubfields(subschema: SubschemaType, schema: Schema): string[] {
+		return Object.keys(subschema.properties);
+	}
 
-	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
+	listValueSubfields(value: any, subschema: SubschemaType, schema: Schema): string[] {
+		if (typeof value === 'object' && value) {
+			return Object.keys(value);
+		} else {
+			return [];
+		}
+	}
+
+	getValueSubfield(value: any, subschema: SubschemaType, field: string, schema: Schema): any {
+		if (typeof value === 'object' && value) {
+			return value[field];
+		} else {
+			return undefined;
+		}
+	}
+
+	setValueSubfield(value: any, subschema: SubschemaType, field: string, fieldValue: any, schema: Schema): void {
+		if (typeof value === 'object' && value) {
+			if (fieldValue !== undefined) {
+				value[field] = fieldValue;
+			} else {
+				delete value[field];
+			}
+		}
+	}
+
+	getFieldSubschemaPath(subschema: SubschemaType, field: string, schema: Schema): string {
+		return 'properties.' + field;
+	}
+
+	/*traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
 		for (let prop in subschema.properties) {
 			schema._traverseSubschemaValue(
 				value[prop],
@@ -76,7 +108,6 @@ export class SchemaTypeObject extends SchemaType {
 			}
 		}
 	}
-
 
 	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
 		for (let prop in subschema.properties) {
@@ -127,6 +158,7 @@ export class SchemaTypeObject extends SchemaType {
 			});
 		})).then( () => value );
 	}
+	*/
 
 
 	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
@@ -166,14 +198,14 @@ export class SchemaTypeObject extends SchemaType {
 export class SchemaTypeArray extends SchemaType {
 
 	constructor(name: string = 'array') {
-		super(name || 'array');
+		super(name || 'array', true, false);
 	}
 
 	matchShorthandType(subschema: any): boolean {
 		return (Array.isArray(subschema) && subschema.length === 1);
 	}
 
-	traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
+	/*traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
 		let newPath;
 		let newRawPath = rawPath ? (rawPath + '.elements') : 'elements';
 		if (options.includePathArrays) {
@@ -188,6 +220,14 @@ export class SchemaTypeArray extends SchemaType {
 			handlers,
 			options
 		);
+	}*/
+
+	getFieldSubschemaPath(subschema: SubschemaType, field: string, schema: Schema): string {
+		return 'elements';
+	}
+
+	listSchemaSubfields(subschema: SubschemaType, schema: Schema): string[] {
+		return [ '$' ];
 	}
 
 	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
@@ -207,6 +247,25 @@ export class SchemaTypeArray extends SchemaType {
 		}
 	}
 
+	listValueSubfields(value: any, subschema: SubschemaType, schema: Schema): string[] {
+		let ret: string[] = [];
+		if (Array.isArray(value)) {
+			for (let i = 0; i < value.length; i++) {
+				ret.push(String(i));
+			}
+		}
+		return ret;
+	}
+
+
+	getValueSubfield(value: any, subschema: SubschemaType, field: string, schema: Schema): any {
+		return value[parseInt(field)];
+	}
+
+	setValueSubfield(value: any, subschema: SubschemaType, field: string, fieldValue: any, schema: Schema): void {
+		value[parseInt(field)] = fieldValue;
+	}
+
 	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
 		if (!subschema.elements) {
 			throw new SchemaError('Array schema must have elements field');
@@ -222,7 +281,8 @@ export class SchemaTypeArray extends SchemaType {
 		return subschema;
 	}
 
-	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
+
+	/*traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
 		for (let i = 0; i < value.length; i++) {
 			schema._traverseSubschemaValue(
 				value[i],
@@ -231,9 +291,9 @@ export class SchemaTypeArray extends SchemaType {
 				handlers
 			);
 		}
-	}
+	}*/
 
-	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
+	/*transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
 		let hasDeletions: boolean = false;
 		for (let i = 0; i < value.length; i++) {
 			value[i] = schema._transformSubschemaValue(
@@ -251,9 +311,9 @@ export class SchemaTypeArray extends SchemaType {
 		} else {
 			return value;
 		}
-	}
+	}*/
 
-	transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
+	/*transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
 		let hasDeletions = false;
 		return Promise.all(_.map(value, function(elem, i) {
 			return schema._transformSubschemaValueAsync(
@@ -274,7 +334,8 @@ export class SchemaTypeArray extends SchemaType {
 				return value;
 			}
 		});
-	}
+	}*/
+
 
 	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 		if (!_.isArray(value)) {
@@ -309,14 +370,14 @@ export class SchemaTypeArray extends SchemaType {
 export class SchemaTypeMap extends SchemaType {
 
 	constructor(name: string = 'map') {
-		super(name || 'map');
+		super(name || 'map', true, false);
 	}
 
 	matchShorthandType(subschema: any): boolean {
 		return false;
 	}
 
-	traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
+	/*traverseSchema(subschema: SubschemaType, path: string, rawPath: string, handlers: SchemaTraverseHandlers, schema: Schema, options: SchemaTraverseOptions): void {
 		let newPath: string;
 		let newRawPath: string = rawPath ? (rawPath + '.values') : 'values';
 		if (options.includePathArrays) {
@@ -331,10 +392,34 @@ export class SchemaTypeMap extends SchemaType {
 			handlers,
 			options
 		);
-	}
+	}*/
 
 	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
 		return subschema.values;
+	}
+
+	getFieldSubschemaPath(subschema: SubschemaType, field: string, schema: Schema): string {
+		return 'values';
+	}
+
+	listSchemaSubfields(subschema: SubschemaType, schema: Schema): string[] {
+		return [ '$' ];
+	}
+
+	listValueSubfields(value: any, subschema: SubschemaType, schema: Schema): string[] {
+		if (typeof value === 'object' && value) {
+			return Object.keys(value);
+		} else {
+			return [];
+		}
+	}
+
+	getValueSubfield(value: any, subschema: SubschemaType, field: string, schema: Schema): any {
+		return value[field];
+	}
+
+	setValueSubfield(value: any, subschema: SubschemaType, field: string, fieldValue: any, schema: Schema): void {
+		value[field] = fieldValue;
 	}
 
 	normalizeSchema(subschema: any, schema: Schema): SubschemaType {
@@ -345,7 +430,7 @@ export class SchemaTypeMap extends SchemaType {
 		return subschema;
 	}
 
-	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
+/*	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
 		for (let prop in value) {
 			schema._traverseSubschemaValue(
 				value[prop],
@@ -388,7 +473,7 @@ export class SchemaTypeMap extends SchemaType {
 				}
 			});
 		})).then( () => value );
-	}
+	}*/
 
 	validate(value: any, subschema: SubschemaType, field: string, options: ValidateOptions, schema: Schema): void {
 		if (!objtools.isPlainObject(value)) {
@@ -418,7 +503,7 @@ export class SchemaTypeMap extends SchemaType {
 export class SchemaTypeOr extends SchemaType {
 
 	constructor(name: string = 'or') {
-		super(name || 'or');
+		super(name || 'or', true, false);
 	}
 
 	matchShorthandType(subschema: any): boolean {
@@ -595,7 +680,7 @@ export class SchemaTypePrimitive extends SchemaType {
 	_shorthands: any[];
 
 	constructor(name: string, shorthands: any[] = null) {
-		super(name);
+		super(name, false);
 		this._shorthands = shorthands || [];
 	}
 
