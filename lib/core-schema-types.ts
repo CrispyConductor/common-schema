@@ -391,14 +391,24 @@ export class SchemaTypeArraySet extends SchemaType {
 	}
 
 	getFieldSubschemaPath(subschema: SubschemaType, field: string, schema: Schema): string {
+		if (subschema.keySchemas && subschema.keySchemas[field]) {
+			return 'keySchemas.' + field;
+		}
 		return 'elements';
 	}
 
 	listSchemaSubfields(subschema: SubschemaType, schema: Schema): string[] {
-		return [ '$' ];
+		let r: string[] = [ '$' ];
+		if (subschema.keySchemas) {
+			r.push(...(Object.keys(subschema.keySchemas)));
+		}
+		return r;
 	}
 
 	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
+		if (subschema.keySchemas && subschema.keySchemas[pathComponent]) {
+			return subschema.keySchemas[pathComponent];
+		}
 		return subschema.elements;
 	}
 
@@ -496,6 +506,11 @@ export class SchemaTypeArraySet extends SchemaType {
 			throw new SchemaError('ArraySet schema must have elements field');
 		}
 		subschema.elements = schema._normalizeSubschema(subschema.elements);
+		if (subschema.keySchemas) {
+			for (let k in subschema.keySchemas) {
+				subschema.keySchemas[k] = schema._normalizeSubschema(subschema.keySchemas[k]);
+			}
+		}
 		return subschema;
 	}
 
@@ -559,15 +574,25 @@ export class SchemaTypeMap extends SchemaType {
 	}*/
 
 	getFieldSubschema(subschema: SubschemaType, pathComponent: string, schema: Schema): any | undefined {
+		if (subschema.keySchemas && subschema.keySchemas[pathComponent]) {
+			return subschema.keySchemas[pathComponent];
+		}
 		return subschema.values;
 	}
 
 	getFieldSubschemaPath(subschema: SubschemaType, field: string, schema: Schema): string {
+		if (subschema.keySchemas && subschema.keySchemas[field]) {
+			return 'keySchemas.' + field;
+		}
 		return 'values';
 	}
 
 	listSchemaSubfields(subschema: SubschemaType, schema: Schema): string[] {
-		return [ '$' ];
+		let r: string[] = [ '$' ];
+		if (subschema.keySchemas) {
+			r.push(...(Object.keys(subschema.keySchemas)));
+		}
+		return r;
 	}
 
 	listValueSubfields(value: any, subschema: SubschemaType, schema: Schema): string[] {
@@ -591,6 +616,11 @@ export class SchemaTypeMap extends SchemaType {
 			throw new SchemaError('Map schema must have values field');
 		}
 		subschema.values = schema._normalizeSubschema(subschema.values);
+		if (subschema.keySchemas) {
+			for (let k in subschema.keySchemas) {
+				subschema.keySchemas[k] = schema._normalizeSubschema(subschema.keySchemas[k]);
+			}
+		}
 		return subschema;
 	}
 
