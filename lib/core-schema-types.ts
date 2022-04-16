@@ -415,6 +415,8 @@ export class SchemaTypeArraySet extends SchemaType {
 	getFieldSubschemaForModify(subschema: SubschemaType, field: string, schema: Schema): any | undefined {
 		if (subschema.keySchemas && subschema.keySchemas[field]) {
 			return subschema.keySchemas[field];
+		} else if (field === '$') { // generic array placeholder always returns generic elements schema
+			return subschema.elements;
 		} else {
 			if (!subschema.keySchemas) {
 				subschema.keySchemas = {};
@@ -595,6 +597,8 @@ export class SchemaTypeMap extends SchemaType {
 	getFieldSubschemaForModify(subschema: SubschemaType, field: string, schema: Schema): any | undefined {
 		if (subschema.keySchemas && subschema.keySchemas[field]) {
 			return subschema.keySchemas[field];
+		} else if (field === '$') {
+			return subschema.values;
 		} else {
 			if (!subschema.keySchemas) {
 				subschema.keySchemas = {};
