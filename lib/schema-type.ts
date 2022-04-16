@@ -111,6 +111,24 @@ export abstract class SchemaType {
 	}
 
 	/**
+	 * Returns the subschema of this schema that corresponds to the given field.  The returned subschema
+	 * can be modified and modifications should apply to only the requested field.
+	 *
+	 * Often this can be the same as getFieldSubschema() but differs in two ways:
+	 * 1. For container schema types that support subfields with a default subschema but also support specific
+	 *    subschemas for different fields (eg. SchemaTypeMap supports the default 'values' subschemas as well
+	 *    as key-specific subschemas with 'keySchemas'): If the specified field does not correspond to an
+	 *    already-defined key-specific subschema, a new key-specific subschema should be created for this field,
+	 *    copied from the default.
+	 * 2. For schema types that return a static subschema, this method must return a modifiable version.
+	 *
+	 * @method getFieldSubschemaForModify
+	 */
+	getFieldSubschemaForModify(subschema: SubschemaType, field: string, schema: Schema): any | undefined {
+		return this.getFieldSubschema(subschema, field, schema);
+	}
+
+	/**
 	 * Returns the field in the schema that corresponds to the given field path in a corresponding value.
 	 */
 	getFieldSubschemaPath(subschema: SubschemaType, field: string, schema: Schema): string {

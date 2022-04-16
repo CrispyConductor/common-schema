@@ -412,6 +412,18 @@ export class SchemaTypeArraySet extends SchemaType {
 		return subschema.elements;
 	}
 
+	getFieldSubschemaForModify(subschema: SubschemaType, field: string, schema: Schema): any | undefined {
+		if (subschema.keySchemas && subschema.keySchemas[field]) {
+			return subschema.keySchemas[field];
+		} else {
+			if (!subschema.keySchemas) {
+				subschema.keySchemas = {};
+			}
+			subschema.keySchemas[field] = objtools.deepCopy(subschema.elements);
+			return subschema.keySchemas[field];
+		}
+	}
+
 	// Return a unique key string used to index the element based on keyField
 	_getElementKey(elementValue: any, subschema: SubschemaType, schema: Schema, throwOnUndefined: boolean = false): string | undefined {
 		const encodeValue = (v: any): string | undefined => {
@@ -485,7 +497,7 @@ export class SchemaTypeArraySet extends SchemaType {
 	getValueSubfield(value: any, subschema: SubschemaType, field: string, schema: Schema): any {
 		for (let el of value) {
 			if (this._getElementKey(el, subschema, schema) === field) {
-				return value;
+				return el;
 			}
 		}
 		return undefined;
@@ -578,6 +590,18 @@ export class SchemaTypeMap extends SchemaType {
 			return subschema.keySchemas[pathComponent];
 		}
 		return subschema.values;
+	}
+
+	getFieldSubschemaForModify(subschema: SubschemaType, field: string, schema: Schema): any | undefined {
+		if (subschema.keySchemas && subschema.keySchemas[field]) {
+			return subschema.keySchemas[field];
+		} else {
+			if (!subschema.keySchemas) {
+				subschema.keySchemas = {};
+			}
+			subschema.keySchemas[field] = objtools.deepCopy(subschema.values);
+			return subschema.keySchemas[field];
+		}
 	}
 
 	getFieldSubschemaPath(subschema: SubschemaType, field: string, schema: Schema): string {

@@ -596,6 +596,10 @@ export class Schema {
 		return schemaType;
 	}
 
+	getType(name: string): SchemaType {
+		return this._getType(name);
+	}
+
 	/**
 	 * Returns the SchemaType corresponding to a subschema.
 	 *
@@ -631,6 +635,37 @@ export class Schema {
 				.getFieldSubschema(currentSubschema, pathComponent, this);
 		}
 		return currentSubschema;
+	}
+
+	/**
+	 * Returns the subschema data at the path in such a way that the subschema can be modified
+	 * and it will apply to the specific named field.
+	 *
+	 * @method getSubschemaDataForModify
+	 */
+	getSubschemaDataForModify(path: string): SubschemaType {
+		// Edge case for root path
+		if (!path) return this.getData();
+
+		// Traverse schema along path
+		let pathComponents: string[] = path.split('.');
+		let currentSubschema: SubschemaType = this.getData();
+		for (let pathComponent of pathComponents) {
+			if (!currentSubschema) return undefined;
+			currentSubschema = this
+				.getSchemaType(currentSubschema)
+				.getFieldSubschemaForModify(currentSubschema, pathComponent, this);
+		}
+		return currentSubschema;
+	}
+
+	/**
+	 * Sets a schema option at the given path.
+	 */
+	setSubschemaOption(subschemaPath: string, optionName: string, optionValue: any): void {
+		let subschema = this.getSubschemaDataForModify(subschemaPath);
+		if (!subschema) throw new Error('Subschema path ' + subschemaPath + ' does not exist on schema');
+		objtools.setPath(subschema, optionName, optionValue);
 	}
 
 	/**
