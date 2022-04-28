@@ -193,6 +193,10 @@ export class SchemaTypeObject extends SchemaType {
 		return jsonSchema;
 	}
 
+	newEmptyContainer(valueTemplate: any, subschema: SubschemaType, schema: Schema): any {
+		return {};
+	}
+
 }
 
 export class SchemaTypeArray extends SchemaType {
@@ -365,6 +369,9 @@ export class SchemaTypeArray extends SchemaType {
 		};
 	}
 
+	newEmptyContainer(valueTemplate: any, subschema: SubschemaType, schema: Schema): any {
+		return [];
+	}
 }
 
 
@@ -558,6 +565,10 @@ export class SchemaTypeArraySet extends SchemaType {
 		};
 	}
 
+	newEmptyContainer(valueTemplate: any, subschema: SubschemaType, schema: Schema): any {
+		return [];
+	}
+
 }
 
 export class SchemaTypeMap extends SchemaType {
@@ -719,6 +730,10 @@ export class SchemaTypeMap extends SchemaType {
 				'^.*$': schema._subschemaToJSONSchema(subschema.values)
 			}
 		};
+	}
+
+	newEmptyContainer(valueTemplate: any, subschema: SubschemaType, schema: Schema): any {
+		return {};
 	}
 }
 

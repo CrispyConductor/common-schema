@@ -589,11 +589,7 @@ export class Schema {
 	 * @return {SchemaType}
 	 */
 	_getType(name: string): SchemaType {
-		let schemaType: SchemaType = this._schemaFactory._schemaTypes[name];
-		if (!schemaType) {
-			throw new SchemaError('Unknown schema type: ' + name);
-		}
-		return schemaType;
+		return this._schemaFactory.getType(name);
 	}
 
 	getType(name: string): SchemaType {

@@ -58,7 +58,7 @@ describe('Schema', function() {
 		expect(actual).to.deep.equal(expected);
 	});
 
-	it.only('#setSubschemaOption', function() {
+	it('#setSubschemaOption', function() {
 		let schema = createSchema({
 			scalarTest: String,
 			nestedObjectTest: {

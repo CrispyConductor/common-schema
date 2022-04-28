@@ -1,5 +1,6 @@
 import { Schema, SchemaOptions } from './schema.js';
 import { SchemaType } from './schema-type.js';
+import { SchemaError } from './schema-error.js';
 import * as coreSchemaTypes from './core-schema-types.js';
 import * as geoSchemaTypes from './geo-schema-types.js';
 
@@ -82,6 +83,14 @@ export class SchemaFactory {
 	 */
 	getRegisteredSchema(name: string): Schema {
 		return this._schemaRegistry[name];
+	}
+
+	getType(name: string): SchemaType {
+		let schemaType: SchemaType = this._schemaTypes[name];
+		if (!schemaType) {
+			throw new SchemaError('Unknown schema type: ' + name);
+		}
+		return schemaType;
 	}
 }
 

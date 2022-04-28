@@ -46,6 +46,20 @@ export abstract class SchemaType {
 	}
 
 	/**
+	 * For container types, constructs and returns a new value representing an empty container
+	 * of the same parameters as valueTemplate (if provided).
+	 *
+	 * @method newEmptyContainer
+	 * @param {Mixed} valueTemplate - A template value to use for container parameters, if applicable.
+	 * @param {Object} subschema
+	 * @param {Schema} schema
+	 * @return {Mixed} - The empty container
+	 */
+	newEmptyContainer(valueTemplate: any, subschema: SubschemaType, schema: Schema): any {
+		throw new Error('Unsupported operation');
+	}
+
+	/**
 	 * Determines whether this subschema handles a shorthand type, ex. `Number` .
 	 *
 	 * @method matchShorthandType
