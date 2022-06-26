@@ -185,4 +185,33 @@ describe('#transformAsync', function() {
 
 	});
 
+	it('autodetect', function(done) {
+		const schema = createSchema({ type: 'autodetect' });
+		let obj = {
+			foo: {
+				bar: {
+					baz: 5,
+					biz: 'buz'
+				}
+			}
+		};
+		schema.transformAsync(obj, {
+			async onField(field, value) {
+				if (typeof value === 'number') return value + 1;
+				if (typeof value === 'string') return value + '_';
+				return value;
+			}
+		}).then(function(result) {
+			expect(result).to.deep.equal({
+				foo: {
+					bar: {
+						baz: 6,
+						biz: 'buz_'
+					}
+				}
+			});
+			done();
+		}).catch(done);
+	});
+
 });

@@ -124,6 +124,11 @@ export abstract class SchemaType {
 		return undefined;
 	}
 
+	// For cases that the subschema might depend on the container value
+	getFieldValueSubschema(value: any, subschema: SubschemaType, field: string, schema: Schema): any | undefined {
+		return this.getFieldSubschema(subschema, field, schema);
+	}
+
 	/**
 	 * Returns the subschema of this schema that corresponds to the given field.  The returned subschema
 	 * can be modified and modifications should apply to only the requested field.
@@ -140,6 +145,11 @@ export abstract class SchemaType {
 	 */
 	getFieldSubschemaForModify(subschema: SubschemaType, field: string, schema: Schema): any | undefined {
 		return this.getFieldSubschema(subschema, field, schema);
+	}
+
+
+	getFieldValueSubschemaForModify(value: any, subschema: SubschemaType, field: string, schema: Schema): any | undefined {
+		return this.getFieldSubschemaForModify(subschema, field, schema);
 	}
 
 	/**
@@ -238,7 +248,7 @@ export abstract class SchemaType {
 		if (this.isContainer(value, subschema, schema)) {
 			let subfieldSet: Set<string> = new Set();
 			for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
-				let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
+				let subsubschema = this.getFieldValueSubschema(value, subschema, subfield, schema);
 				subfieldSet.add(subfield);
 				schema._traverseSubschemaValue(
 					subvalue,
@@ -283,7 +293,7 @@ export abstract class SchemaType {
 		if (this.isContainer(value, subschema, schema) && value) {
 			let subfieldSet: Set<string> = new Set();
 			for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
-				let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
+				let subsubschema = this.getFieldValueSubschema(value, subschema, subfield, schema);
 				let newValue = schema._transformSubschemaValue(
 					subvalue,
 					subsubschema,
@@ -338,7 +348,7 @@ export abstract class SchemaType {
 		if (this.isContainer(value, subschema, schema) && value) {
 			let subfieldSet: Set<string> = new Set();
 			for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
-				let subsubschema = this.getFieldSubschema(subschema, subfield, schema);
+				let subsubschema = this.getFieldValueSubschema(value, subschema, subfield, schema);
 				let newValue = await schema._transformSubschemaValueAsync(
 					subvalue,
 					subsubschema,

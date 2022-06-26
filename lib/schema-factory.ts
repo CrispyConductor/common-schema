@@ -3,6 +3,7 @@ import { SchemaType } from './schema-type.js';
 import { SchemaError } from './schema-error.js';
 import * as coreSchemaTypes from './core-schema-types.js';
 import * as geoSchemaTypes from './geo-schema-types.js';
+import * as autodetectSchemaTypes from './autodetect-schema-type.js';
 
 /**
  * Class that creates schemas.  Custom schema types can be registered to a factory and schemas
@@ -20,6 +21,7 @@ export class SchemaFactory {
 		this._schemaRegistry = {};
 		this._loadTypes(coreSchemaTypes);
 		this._loadTypes(geoSchemaTypes);
+		this._loadTypes(autodetectSchemaTypes);
 	}
 
 	/**
