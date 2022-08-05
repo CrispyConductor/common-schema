@@ -199,6 +199,21 @@ export class SchemaTypeObject extends SchemaType {
 
 }
 
+function removeArrayUndefinedValues(ar: any[]) {
+	if (!Array.isArray(ar)) return;
+	let dstidx = 0;
+	let srcidx = 0;
+	while (srcidx < ar.length) {
+		const v = ar[srcidx];
+		if (v !== undefined) {
+			ar[dstidx] = v;
+			dstidx++;
+		}
+		srcidx++;
+	}
+	ar.length = dstidx;
+}
+
 export class SchemaTypeArray extends SchemaType {
 
 	constructor(name: string = 'array') {
@@ -354,6 +369,7 @@ export class SchemaTypeArray extends SchemaType {
 
 
 	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
+		removeArrayUndefinedValues(value);
 		this.validate(value, subschema, field, options, schema);
 		return value;
 	}
@@ -550,6 +566,7 @@ export class SchemaTypeArraySet extends SchemaType {
 	}
 
 	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
+		removeArrayUndefinedValues(value);
 		this.validate(value, subschema, field, options, schema);
 		return value;
 	}
