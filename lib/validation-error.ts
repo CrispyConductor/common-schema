@@ -24,6 +24,9 @@ export class ValidationError extends Error {
 		} else {
 			message = 'Validation failure';
 		}
+		if (fieldErrors?.[0]?.field) {
+			message += ': ' + fieldErrors?.[0]?.field;
+		}
 		super(message);
 		this.code = 'validation_error';
 		this.fieldErrors = fieldErrors;

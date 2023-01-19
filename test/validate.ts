@@ -155,19 +155,19 @@ describe('#validate', function() {
 			{
 				'field': 'geojsons.0',
 				'code': 'invalid_format',
-				'message': 'Latitude must be between -90 and 90',
+				'message': 'Latitude must be between -90 and 90: coordinates',
 				'details': undefined
 			},
 			{
 				'field': 'geojsons.2',
 				'code': 'invalid_format',
-				'message': 'Latitude must be between -90 and 90',
+				'message': 'Latitude must be between -90 and 90: coordinates.0.3',
 				'details': undefined
 			},
 			{
 				'field': 'geojsons.4',
 				'code': 'invalid_format',
-				'message': 'Latitude must be between -90 and 90',
+				'message': 'Latitude must be between -90 and 90: coordinates.2: geometries.1',
 				'details': undefined
 			},
 			{
