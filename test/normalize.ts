@@ -147,10 +147,10 @@ describe('#normalize', function() {
 	});
 
 	it('array empty elements', function() {
-		let schema = createSchema([ String ]);
+		let schema = createSchema([ { type: String, required: true } ]);
 		expect(schema.normalize([])).to.deep.equal([]);
 		expect(schema.normalize([ 3 ])).to.deep.equal([ '3' ]);
-		expect( () => schema.normalize([ 3, undefined ]) ).to.throw(ValidationError);
+		expect( () => schema.normalize([ 3, null ]) ).to.throw(ValidationError);
 	});
 
 	it('map', function() {
