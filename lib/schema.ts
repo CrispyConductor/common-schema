@@ -76,7 +76,7 @@ export type ListFieldsOptions = {
 };
 
 
-
+const symbolStopTransform = Symbol.for('common-schema.stopTransform');
 
 
 
@@ -389,6 +389,14 @@ export class Schema {
 			let subschemaType: SchemaType = this._getType(subschema.type);
 			if (handlers.onField) {
 				newValue = handlers.onField(field, newValue, subschema, subschemaType);
+				const isStopTransform: boolean = typeof newValue === 'object' && newValue && newValue[symbolStopTransform];
+				if (isStopTransform) {
+					if (newValue[symbolStopTransform].setNewValue) {
+						return newValue[symbolStopTransform].newValue;
+					} else {
+						return value;
+					}
+				}
 			}
 			if (newValue !== null && newValue !== undefined) {
 				newValue = subschemaType.transform(newValue, subschema, field, handlers, this);
@@ -438,7 +446,10 @@ export class Schema {
 				promise = promise.then( (newValue: any): Promise<any> => handlers.onField(field, newValue, subschema, subschemaType) );
 			}
 			promise = promise.then( (newValue: any): Promise<any> => {
-				if (newValue !== null && newValue !== undefined) {
+				const isStopTransform: boolean = typeof newValue === 'object' && newValue && newValue[symbolStopTransform];
+				if (isStopTransform) {
+					return Promise.resolve(newValue[symbolStopTransform].setNewValue ? newValue[symbolStopTransform].newValue : value);
+				} else if (newValue !== null && newValue !== undefined) {
 					return subschemaType.transformAsync(newValue, subschema, field, handlers, this);
 				} else {
 					return Promise.resolve(newValue);
@@ -455,6 +466,33 @@ export class Schema {
 				return Promise.resolve(value);
 			}
 		}
+	}
+
+	/**
+	 * Generate a special value to return from transform onField() that
+	 * stops traversal down that branch.
+	 */
+	stopTransform(): any {
+		return {
+			[symbolStopTransform]: {
+				stopTraverse: true,
+				setNewValue: false
+			}
+		};
+	}
+
+	/**
+	 * Generate a special value to return from transform onField() that
+	 * stops traversal down that branch after setting a new value.
+	 */
+	setAndStopTransform(newValue: any): any {
+		return {
+			[symbolStopTransform]: {
+				stopTraverse: true,
+				setNewValue: true,
+				newValue: newValue
+			}
+		};
 	}
 
 	/**

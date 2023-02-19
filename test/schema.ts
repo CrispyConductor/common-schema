@@ -143,5 +143,71 @@ describe('Schema', function() {
 		expect(schema.getData()).to.deep.equal(expected);
 	});
 
+	it('transform', function() {
+		const schema = createSchema({
+			arrayTest: [
+				{
+					stopTraverseHere: Boolean,
+					setAndStopHere: Boolean,
+					valueFoo: String,
+					subobject: {
+						valueFoo: String
+					}
+				}
+			]
+		});
+		const obj = {
+			arrayTest: [
+				{
+					valueFoo: 'foo',
+					subobject: {
+						valueFoo: 'foo'
+					}
+				},
+				{
+					stopTraverseHere: true,
+					valueFoo: 'foo',
+					subobject: {
+						valueFoo: 'foo'
+					}
+				},
+				{
+					setAndStopHere: true,
+					valueFoo: 'foo',
+					subobject: {
+						valueFoo: 'foo'
+					}
+				}
+			]
+		};
+		const expected = {
+			arrayTest: [
+				{
+					valueFoo: 'bar',
+					subobject: {
+						valueFoo: 'bar'
+					}
+				},
+				{
+					stopTraverseHere: true,
+					valueFoo: 'foo',
+					subobject: {
+						valueFoo: 'foo'
+					}
+				},
+				{
+				}
+			]
+		};
+		const result = schema.transform(obj, {
+			onField(field, value) {
+				if (field.endsWith('valueFoo')) return 'bar';
+				if (value && value.stopTraverseHere) return schema.stopTransform();
+				if (value && value.setAndStopHere) return schema.setAndStopTransform({});
+				return value;
+			}
+		});
+	});
+
 
 });

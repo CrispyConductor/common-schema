@@ -5,7 +5,7 @@ import _ from 'lodash';
 describe('#transformAsync', function() {
 
 	it('test1', function(done) {
-		const schema = createSchema([ { foo: String } ]);
+		const schema = createSchema([ { foo: String, a: Boolean } ]);
 		let obj = [ {}, { a: true } ];
 		schema.transformAsync(obj, {
 			onField(field, value) {
@@ -20,6 +20,48 @@ describe('#transformAsync', function() {
 			}
 		}).then(function(result) {
 			expect(result).to.deep.equal([ { addedThing: true }, { addedThing: true, a: true } ]);
+			done();
+		}).catch(done);
+	});
+
+	it('test1 stop transform', function(done) {
+		const schema = createSchema([ { foo: String, a: Boolean, b: { foo: String } } ]);
+		let obj = [ {}, { a: true, b: {} } ];
+		schema.transformAsync(obj, {
+			onField(field, value) {
+				return new Promise(function(resolve) {
+					setTimeout(function() {
+						if (value && value.a) return resolve(schema.stopTransform());
+						if (_.isPlainObject(value)) {
+							value.addedThing = true;
+						}
+						resolve(value);
+					}, 5);
+				});
+			}
+		}).then(function(result) {
+			expect(result).to.deep.equal([ { addedThing: true }, { a: true, b: {} } ]);
+			done();
+		}).catch(done);
+	});
+
+	it('test1 set and stop transform', function(done) {
+		const schema = createSchema([ { foo: String, a: Boolean, b: { foo: String } } ]);
+		let obj = [ {}, { a: true, b: {} } ];
+		schema.transformAsync(obj, {
+			onField(field, value) {
+				return new Promise(function(resolve) {
+					setTimeout(function() {
+						if (value && value.a) return resolve(schema.setAndStopTransform({}));
+						if (_.isPlainObject(value)) {
+							value.addedThing = true;
+						}
+						resolve(value);
+					}, 5);
+				});
+			}
+		}).then(function(result) {
+			expect(result).to.deep.equal([ { addedThing: true }, { } ]);
 			done();
 		}).catch(done);
 	});
