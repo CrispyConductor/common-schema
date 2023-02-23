@@ -587,43 +587,55 @@ export class SchemaTypeArraySet extends SchemaType {
 	}
 
 	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
-		let subfieldSet: Set<string> = new Set();
-		for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
-			let subsubschema = this.getFieldValueSubschema(value, subschema, subfield, schema);
-			const oldKey = this._getElementKey(subvalue, subschema, schema, false);
-			let newValue = schema._transformSubschemaValue(
-				subvalue,
-				subsubschema,
-				field ? (field + '.' + subfield) : subfield,
+		if (!Array.isArray(value)) return value;
+		const newArr: any[] = value.map((el) => {
+			const key = this._getElementKey(el, subschema, schema, false);
+			return schema._transformSubschemaValue(
+				el,
+				subschema.elements,
+				field ? (field + '.' + key) : key,
 				handlers
 			);
-			const newKey = this._getElementKey(newValue, subschema, schema, false);
-			subfieldSet.add(subfield);
-			if (newKey !== oldKey) {
-				this.setValueSubfield(value, subschema, subfield, undefined, schema);
-			}
-			this.setValueSubfield(value, subschema, subfield, newValue, schema);
+		}).filter((el) => el !== undefined);
+		// sync keys in value
+		for (let i = 0; i < newArr.length; i++) {
+			value[i] = newArr[i];
 		}
+		value.length = newArr.length;
 		return value;
 	}
 
 	async transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
-		let subfieldSet: Set<string> = new Set();
-		for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
-			let subsubschema = this.getFieldValueSubschema(value, subschema, subfield, schema);
-			const oldKey = this._getElementKey(subvalue, subschema, schema, false);
-			let newValue = await schema._transformSubschemaValueAsync(
-				subvalue,
-				subsubschema,
-				field ? (field + '.' + subfield) : subfield,
+		if (!Array.isArray(value)) return value;
+		const newArr: any[] = [];
+		for (const el of value) {
+			const key = this._getElementKey(el, subschema, schema, false);
+			const newValue = await schema._transformSubschemaValueAsync(
+				el,
+				subschema.elements,
+				field ? (field + '.' + key) : key,
 				handlers
 			);
-			const newKey = this._getElementKey(newValue, subschema, schema, false);
-			subfieldSet.add(subfield);
-			if (newKey !== oldKey) {
-				this.setValueSubfield(value, subschema, subfield, undefined, schema);
-			}
-			this.setValueSubfield(value, subschema, subfield, newValue, schema);
+			if (newValue !== undefined) newArr.push(newValue);
+		}
+		// sync keys in value
+		for (let i = 0; i < newArr.length; i++) {
+			value[i] = newArr[i];
+		}
+		value.length = newArr.length;
+		return value;
+	}
+
+	traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
+		if (!Array.isArray(value)) return value;
+		for (const el of value) {
+			const key = this._getElementKey(el, subschema, schema, false);
+			schema._traverseSubschemaValue(
+				el,
+				subschema.elements,
+				field ? (field + '.' + key) : key,
+				handlers
+			);
 		}
 	}
 }
