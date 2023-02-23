@@ -154,7 +154,15 @@ describe('Schema', function() {
 						valueFoo: String
 					}
 				}
-			]
+			],
+			arraysetTest: {
+				type: 'arrayset',
+				elements: {
+					myKey: String,
+					otherKey: String
+				},
+				keyField: 'myKey'
+			}
 		});
 		const obj = {
 			arrayTest: [
@@ -178,6 +186,12 @@ describe('Schema', function() {
 						valueFoo: 'foo'
 					}
 				}
+			],
+			arraysetTest: [
+				{
+					myKey: 'a',
+					otherKey: 'a'
+				}
 			]
 		};
 		const expected = {
@@ -197,11 +211,18 @@ describe('Schema', function() {
 				},
 				{
 				}
+			],
+			arraysetTest: [
+				{
+					myKey: 'b',
+					otherKey: 'b'
+				}
 			]
 		};
 		const result = schema.transform(obj, {
 			onField(field, value) {
 				if (field.endsWith('valueFoo')) return 'bar';
+				if (value === 'a') return 'b';
 				if (value && value.stopTraverseHere) return schema.stopTransform();
 				if (value && value.setAndStopHere) return schema.setAndStopTransform({});
 				return value;

@@ -586,6 +586,46 @@ export class SchemaTypeArraySet extends SchemaType {
 		return [];
 	}
 
+	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
+		let subfieldSet: Set<string> = new Set();
+		for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
+			let subsubschema = this.getFieldValueSubschema(value, subschema, subfield, schema);
+			const oldKey = this._getElementKey(subvalue, subschema, schema, false);
+			let newValue = schema._transformSubschemaValue(
+				subvalue,
+				subsubschema,
+				field ? (field + '.' + subfield) : subfield,
+				handlers
+			);
+			const newKey = this._getElementKey(newValue, subschema, schema, false);
+			subfieldSet.add(subfield);
+			if (newKey !== oldKey) {
+				this.setValueSubfield(value, subschema, subfield, undefined, schema);
+			}
+			this.setValueSubfield(value, subschema, subfield, newValue, schema);
+		}
+		return value;
+	}
+
+	async transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
+		let subfieldSet: Set<string> = new Set();
+		for (let [ subfield, subvalue ] of this.listValueSubfieldEntries(value, subschema, schema)) {
+			let subsubschema = this.getFieldValueSubschema(value, subschema, subfield, schema);
+			const oldKey = this._getElementKey(subvalue, subschema, schema, false);
+			let newValue = await schema._transformSubschemaValueAsync(
+				subvalue,
+				subsubschema,
+				field ? (field + '.' + subfield) : subfield,
+				handlers
+			);
+			const newKey = this._getElementKey(newValue, subschema, schema, false);
+			subfieldSet.add(subfield);
+			if (newKey !== oldKey) {
+				this.setValueSubfield(value, subschema, subfield, undefined, schema);
+			}
+			this.setValueSubfield(value, subschema, subfield, newValue, schema);
+		}
+	}
 }
 
 export class SchemaTypeMap extends SchemaType {
