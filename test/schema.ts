@@ -58,6 +58,24 @@ describe('Schema', function() {
 		expect(actual).to.deep.equal(expected);
 	});
 
+	it('#getObjectPath()', function() {
+		const schema = createSchema({
+			foo: [
+				{
+					bar: String
+				}
+			]
+		});
+		const obj = {
+			foo: [
+				{ bar: 'a' },
+				{ bar: 'b' }
+			]
+		};
+		const path = 'foo.1.bar';
+		expect(schema.getObjectPath(obj, path)).to.equal('b');
+	});
+
 	it('#setSubschemaOption', function() {
 		let schema = createSchema({
 			scalarTest: String,

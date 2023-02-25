@@ -270,6 +270,26 @@ export class Schema {
 	}
 
 	/**
+	 * Returns the value at the given path in the obj.  Similar to objtools.getPath, but this is
+	 * schema-aware for eg. arraysets.
+	 */
+	getObjectPath(obj: any, path: string): any | undefined {
+		return this._getObjPathSubschemaValue(obj, this.getData(), path.split('.'), 0);
+	}
+
+	_getObjPathSubschemaValue(value: any, subschema: SubschemaType, pathParts: string[], partsIdx: number): any {
+		if (partsIdx >= pathParts.length) return value;
+		if (value === null || value === undefined) return undefined;
+		const part: string = pathParts[partsIdx];
+		if (!subschema) return value && value[part];
+		const schemaType: SchemaType = this._getType(subschema.type);
+		if (!schemaType.isContainer(value, subschema, this)) return undefined;
+		const fieldValue = schemaType.getValueSubfield(value, subschema, part, this);
+		const fieldSubschema: SubschemaType = schemaType.getFieldValueSubschema(value, subschema, part, this);
+		return this._getObjPathSubschemaValue(fieldValue, fieldSubschema, pathParts, partsIdx + 1);
+	}
+
+	/**
 	 * Traverses a schema along with an object, calling onField for each field defined by the schema.
 	 * onField is called for each field along the path, including parent fields.  Ie, if the schema
 	 * contains an object, onField is called first for the object itself, then for each field inside
