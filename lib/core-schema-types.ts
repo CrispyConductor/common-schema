@@ -566,6 +566,15 @@ export class SchemaTypeArraySet extends SchemaType {
 	}
 
 	normalize(value: any, subschema: SubschemaType, field: string, options: NormalizeOptions, schema: Schema): any {
+		const seenKeys: Set<string> = new Set();
+		for (let i = 0; i < value.length; i++) {
+			const k: string = this._getElementKey(value[i], subschema, schema);
+			if (seenKeys.has(k)) {
+				value[i] = undefined;
+			} else {
+				seenKeys.add(k);
+			}
+		}
 		removeArrayUndefinedValues(value);
 		this.validate(value, subschema, field, options, schema);
 		return value;

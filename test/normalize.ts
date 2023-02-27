@@ -119,6 +119,17 @@ describe('#normalize', function() {
 		expect(() => schema.normalize({})).to.throw(ValidationError);
 	});
 
+	it('arrayset', function() {
+		let schema = createSchema({
+			type: 'arrayset',
+			elements: {
+				type: 'string'
+			}
+		});
+		expect(schema.normalize([ 2, 3, 2 ])).to.deep.equal([ '2', '3' ]);
+		expect(() => schema.normalize({})).to.throw(ValidationError);
+	});
+
 	it('shorthand array', function() {
 		let schema = createSchema({
 			foo: [ {
