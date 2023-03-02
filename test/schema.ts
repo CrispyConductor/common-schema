@@ -76,6 +76,73 @@ describe('Schema', function() {
 		expect(schema.getObjectPath(obj, path)).to.equal('b');
 	});
 
+	it('#setObjectPath A', function() {
+		const schema = createSchema({
+			foo: {
+				bar: {
+					baz: String
+				}
+			}
+		});
+		const obj: any = {
+			foo: {
+				bar: {
+				}
+			}
+		};
+		schema.setObjectPath(obj, 'foo.bar.baz', 'value');
+		expect(obj.foo.bar.baz).to.equal('value');
+	});
+
+	it('#setObjectPath B', function() {
+		const schema = createSchema({
+			foo: {
+				bar: {
+					baz: String
+				}
+			}
+		});
+		const obj: any = {
+			foo: {
+			}
+		};
+		schema.setObjectPath(obj, 'foo.bar.baz', 'value');
+		expect(obj.foo.bar.baz).to.equal('value');
+	});
+
+	it('#setObjectPath C', function() {
+		const schema = createSchema({
+			foo: 'string'
+		});
+		const obj: any = {
+			foo: {
+			}
+		};
+		schema.setObjectPath(obj, 'foo', 'value');
+		expect(obj.foo).to.equal('value');
+	});
+
+	it('#setObjectPath D', function() {
+		const schema = createSchema({
+			arr: [
+				{
+					foo: 'string'
+				}
+			]
+		});
+		const obj: any = {
+			arr: [
+				{
+					foo: 'a'
+				}
+			]
+		};
+		schema.setObjectPath(obj, 'arr.0.foo', 'b');
+		schema.setObjectPath(obj, 'arr.1.foo', 'c');
+		expect(obj.arr[0].foo).to.equal('b');
+		expect(obj.arr[1].foo).to.equal('c');
+	});
+
 	it('#setSubschemaOption', function() {
 		let schema = createSchema({
 			scalarTest: String,

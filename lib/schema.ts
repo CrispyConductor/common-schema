@@ -289,6 +289,41 @@ export class Schema {
 		return this._getObjPathSubschemaValue(fieldValue, fieldSubschema, pathParts, partsIdx + 1);
 	}
 
+	setObjectPath(obj: any, path: string, newValue: any): void {
+		this._setObjPathSubschemaValue(obj, this.getData(), path.split('.'), 0, newValue);
+	}
+
+	// If partsIdx === pathParts.length - 1 (last part): Set the field [part] to the value at the current container.  Throw if current value is not a container.
+	// Otherwise, recurse into value[part].  If value[part] does not exist, create it.  If value[part] is not a container, throw.
+	_setObjPathSubschemaValue(value: any, subschema: SubschemaType, pathParts: string[], partsIdx: number, newValue: any): void {
+		if (value === null || value === undefined) throw new Error('Cannot set field on undefined or null object');
+		if (partsIdx >= pathParts.length) throw new Error('Invalid path');
+		const part: string = pathParts[partsIdx];
+		if (!subschema) throw new Error('No subschema for object path ' + pathParts.join('.'));
+		const schemaType: SchemaType = this._getType(subschema.type);
+		if (!schemaType.isContainer(value, subschema, this)) throw new Error('Subschema is not container for path ' + pathParts.join('.'));
+		if (partsIdx === pathParts.length - 1) {
+			// This is last path component, need to set the value
+			schemaType.setValueSubfield(value, subschema, part, newValue, this);
+		} else {
+			// Not the last component; descend into or create container
+			let subvalue: any = schemaType.getValueSubfield(value, subschema, part, this);
+			const subsubschema = schemaType.getFieldValueSubschema(value, subschema, part, this);
+			if (!subsubschema) throw new Error('No subschema for object path ' + pathParts.join('.'));
+			const subschemaType: SchemaType = this._getType(subsubschema.type);
+			if (subvalue === null || subvalue === undefined) {
+				try {
+					const newContainer = subschemaType.newEmptyContainer(null, subsubschema, this);
+					schemaType.setValueSubfield(value, subschema, part, newContainer, this);
+					subvalue = newContainer;
+				} catch (e) {
+					throw new Error('Cannot create empty container for setting value ' + pathParts.join('.'));
+				}
+			}
+			this._setObjPathSubschemaValue(subvalue, subsubschema, pathParts, partsIdx + 1, newValue);
+		}
+	}
+
 	/**
 	 * Traverses a schema along with an object, calling onField for each field defined by the schema.
 	 * onField is called for each field along the path, including parent fields.  Ie, if the schema
