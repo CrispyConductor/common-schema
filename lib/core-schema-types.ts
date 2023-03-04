@@ -300,6 +300,18 @@ export class SchemaTypeArray extends SchemaType {
 		return subschema;
 	}
 
+	transform(value: any, subschema: SubschemaType, field: string, handlers: TransformHandlers, schema: Schema): any {
+		value = super.transform(value, subschema, field, handlers, schema);
+		removeArrayUndefinedValues(value);
+		return value;
+	}
+
+	async transformAsync(value: any, subschema: SubschemaType, field: string, handlers: TransformAsyncHandlers, schema: Schema): Promise<any> {
+		value = await super.transformAsync(value, subschema, field, handlers, schema);
+		removeArrayUndefinedValues(value);
+		return value;
+	}
+
 
 	/*traverse(value: any, subschema: SubschemaType, field: string, handlers: TraverseHandlers, schema: Schema): void {
 		for (let i = 0; i < value.length; i++) {
