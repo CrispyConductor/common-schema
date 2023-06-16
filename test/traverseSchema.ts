@@ -62,4 +62,62 @@ describe('#traverseSchema', function() {
 		done();
 	});
 
+	it('xtraverse', function(done) {
+
+		let types = [];
+		let paths = [];
+
+		let schema = createSchema({
+			foo: {
+				bar: Number,
+				baz: String
+			}
+		});
+
+		schema.xtraverseSchema({
+			onSubschema(p) {
+				types.push(p.subschema.type);
+				paths.push(p.fieldPath);
+				return undefined;
+			}
+		});
+
+		expect(types).to.deep.equal([ 'object', 'object', 'number', 'string' ]);
+		expect(paths).to.deep.equal([ '', 'foo', 'foo.bar', 'foo.baz' ]);
+		done();
+
+	});
+
+	it('should stop xtraversing a path if it returns false', function(done) {
+		let types = [];
+		let paths = [];
+
+		let schema = createSchema({
+			bat: {
+				num: Number
+			},
+			foo: [ {
+				bar: Number,
+				baz: String
+			} ]
+		});
+
+		schema.xtraverseSchema({
+			onSubschema(p) {
+				types.push(p.subschema.type);
+				paths.push(p.fieldPath);
+				if (p.subschema.type === 'array') {
+					return false;
+				}
+				if (p.subschema.type === 'object') {
+					return true;
+				}
+			}
+		});
+
+		expect(types).to.deep.equal([ 'object', 'object', 'number', 'array' ]);
+		expect(paths).to.deep.equal([ '', 'bat', 'bat.num', 'foo' ]);
+		done();
+	});
+
 });

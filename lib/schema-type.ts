@@ -1,4 +1,4 @@
-import { Schema, SchemaTraverseHandlers, SchemaTraverseOptions, TraverseHandlers, SubschemaType, TransformHandlers, TransformAsyncHandlers, ValidateOptions, NormalizeOptions } from './schema.js';
+import { Schema, SchemaTraverseHandlers, SchemaTraverseOptions, TraverseHandlers, SubschemaType, TransformHandlers, TransformAsyncHandlers, ValidateOptions, NormalizeOptions, SchemaPositionInfo, ObjectSchemaPositionInfo, XSchemaTraverseHandlers, XTransformHandlers, XTransformHandlerResult } from './schema.js';
 
 /**
  * Superclass for schema type definitions.
@@ -45,6 +45,10 @@ export abstract class SchemaType {
 		return this._defaultIsContainer;
 	}
 
+	xisContainer(p: ObjectSchemaPositionInfo | SchemaPositionInfo): boolean {
+		return this.isContainer((p as ObjectSchemaPositionInfo).value || undefined, p.subschema, p.schema);
+	}
+
 	/**
 	 * For container types, constructs and returns a new value representing an empty container
 	 * of the same parameters as valueTemplate (if provided).
@@ -86,6 +90,23 @@ export abstract class SchemaType {
 			for (let subfield of this.listSchemaSubfields(subschema, schema)) {
 				let subschemaPathPart = this.getFieldSubschemaPath(subschema, subfield, schema);
 				schema._traverseSubschema(
+					this.getFieldSubschema(subschema, subfield, schema),
+					path ? (path + '.' + subfield) : subfield,
+					rawPath ? (rawPath + '.' + subschemaPathPart) : subschemaPathPart,
+					handlers,
+					options
+				);
+			}
+		}
+	}
+
+	xtraverseSchema(p: SchemaPositionInfo, handlers: XSchemaTraverseHandlers, options: SchemaTraverseOptions): void {
+		if (this.xisContainer(p)) {
+			for (const subfield of this.xlistSchemaSubfields(p)) {
+				const subschemaPathPart = this.xgetFieldSubschemaPath(p, subfield);
+				p.schema._xtraverseSubschema(
+					p.schema.appendSchemaPositionInfo(p, subfield.split('.'), subfield.split('.'), ..........)
+
 					this.getFieldSubschema(subschema, subfield, schema),
 					path ? (path + '.' + subfield) : subfield,
 					rawPath ? (rawPath + '.' + subschemaPathPart) : subschemaPathPart,

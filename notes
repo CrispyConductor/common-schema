@@ -1,0 +1,100 @@
+Current state:
+	Schema#transform behavior
+		transform(obj, { onField, postField, onUnknownField })
+		onField(field, value, subschema, subschemaType)
+		postField(field, value, subschema, subschemaType)
+		onUnknownField(field, value)
+		Return replacement value; or special stop transform indicator
+	Schema#traverseSchema behavior
+		traverseSchema(handlers, { includePathArray })
+		onSubschema(subschema, path, schemaType, rawPath)
+	SchemaType methods
+		isContainer(value, subschema, schema) -> boolean
+		traverseSchema(subschema, path, rawPath, handlers, schema, options) -> void
+		listSchemaSubfields(subschema, schema) -> string[]
+		getFieldSubschema(subschema, pathComponent, schema) -> SubschemaType
+		getFieldValueSubschema(value, subschema, field, schema) -> SubschemaType
+		getFieldSubschemaForModify(subschema, field, schema) -> SubschemaType
+		getFieldValueSubschemaForModify(value, subschema, field, schema) -> SubschemaType
+		getFieldSubschemaPath(subschema, field, schema) -> string
+		listValueSubfields(value, subschema, schema) -> string[]
+		listValueSubfieldEntries(value, subschema, schema) -> [string, any][]
+		getValueSubfield(value, subschema, field, schema) -> any
+		setValueSubfield(value, subschema, field, fieldValue, schema) -> void
+		setValueSubfieldBatch(value, subschema, newValues, schema) -> void
+		transform(value, subschema, field, handlers, schema) -> any
+
+		
+
+
+Desired state:
+	interface SchemaPositionInfo {
+		fieldPath?: string;
+		fieldParts?: string[];
+		schemaFieldPath?: string;
+		schemaFieldParts?: string[];
+		subschema?: SubschemaType;
+		schemaType?: SchemaType;
+		schema: Schema;
+		stack?: SchemaPositionInfo[];
+		extraData?: any;
+	}
+	interface ObjectSchemaPositionInfo extends Omit<SchemaPositionInfo, 'stack'> {
+		value?: any;
+		stack?: ObjectSchemaPositionInfo[];
+		root?: any;
+	}
+
+	transform behavior
+		xtransform(obj, { onField, postField, onUnknownField, extraData })
+		onField(params), postField(params), onUnknownField(params)
+		onField and postField params: (XTransformFieldParam)
+			fieldPath: string
+			fieldParts: string[]
+			value: any
+			subschema: SubschemaType
+			schemaType: SchemaType
+			schema: Schema
+			root: any
+			stack: XTransformFieldParam[] // not including current one
+			extraData
+		onUnknownField params: (XTransformUnknownFieldParam)
+			fieldPath
+			fieldParts
+			value
+			schema
+			root
+			stack
+			extraData
+		Return value:
+			- undefined keeps current value and recurses (traverse instead of transform)
+			- {} keeps current value and recurses
+			- { set: NEW VALUE } to set new value
+			- { set: undefined } or { delete: true } to remove  (differentiate between set key not existing, and existing but set to undefined)
+			- { stop: true } to stop traversal at that point
+	traverseSchema behavior
+		xtraverseSchema(handlers, options)
+		onSubschema(params)
+		XTraverseSchemaParam:
+			- subschema
+			- fieldPath
+			- schemaType
+			- rawField
+	also need to change get/set obj paths?
+	SchemaType methods
+		Convert to take param objects as param.  All take base set of transform params modified by listed +fields and -fields.  Most values are optional.
+		xisContainer(ObjectSchemaPositionInfo) -> boolean
+		xtraverseSchema(SchemaPositionInfo, handlers, options) -> void
+		xlistSchemaSubfields(SchemaPositionInfo) -> string[]
+		xgetFieldSubschema(ObjectSchemaPositionInfo | SchemaPositionInfo, fieldPart) -> SubschemaType
+		xgetFieldValueSubschema - covered by xgetFIeldSubschema
+		xgetFieldSubschemaForModify(ObjectSchemaPositionInfo | SchemaPositionInfo, fieldPart) -> SubschemaType
+		xgetFieldValueSubschemaForModify - covered by xgetFieldSubschemaForModify
+		xgetFieldSubschemaPath(SchemaPositionInfo | ObjectSchemaPositionInfo, fieldPart) -> string
+		xlistValueSubfields(ObjectSchemaPositionInfo) -> string[]
+		xlistValueSubfieldEntries(ObjectSchemaPositionInfo) -> [string, any][]
+		xgetValueSubfield(ObjectSchemaPositionInfo, fieldPart) -> any
+		xsetValueSubfield(ObjectSchemaPositionInfo, fieldPart, newValue) -> void
+		xtransform(ObjectSchemaPositionInfo, handlers) -> new value
+
+

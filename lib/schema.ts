@@ -16,12 +16,49 @@ export type SubschemaType = {
 	[param: string]: any;
 };
 
+/**
+ * Contains information about a given point within a schema, corresponding to a subschema.
+ */
+export interface SchemaPositionInfo {
+	// String dot-separated path from the root of the schema to this field.
+	fieldPath?: string;
+	// fieldPath as an array.
+	fieldParts?: string[];
+	// Like fieldPath, but instead of object field names, uses schema field names.  eg for an array. "foo.elements.bar" instead of "foo.3.bar"
+	schemaFieldPath?: string;
+	// schemaFieldPath as an array.
+	schemaFieldParts?: string[];
+	// The subschema at this point in the schema.
+	subschema?: SubschemaType;
+	// The corresponding SchemaType.
+	schemaType?: SchemaType;
+	// The root Schema object.
+	schema?: Schema;
+	// Current stack of position infos during traversal
+	stack?: SchemaPositionInfo[];
+	// Extra user-supplied information during traversal
+	extraData?: any;
+}
+
+/**
+ * Contains information about a given point in an object traversal.
+ */
+export interface ObjectSchemaPositionInfo extends Omit<SchemaPositionInfo, 'stack'> {
+	value?: any;
+	stack?: ObjectSchemaPositionInfo[];
+	root?: any;
+}
+
 export type SchemaTraverseHandlers = {
 	onSubschema?: (subschema: SubschemaType, path?: string, subschemaType?: SchemaType, rawPath?: string) => boolean | undefined;
+};
+export type XSchemaTraverseHandlers = {
+	onSubschema?: (p: SchemaPositionInfo) => boolean | undefined;
 };
 
 export type SchemaTraverseOptions = {
 	includePathArrays?: boolean;
+	extraData?: any;
 };
 
 export type TraverseHandlers = {
@@ -39,6 +76,17 @@ export type TransformAsyncHandlers = {
 	onField?: (field: string, value: any, subschema?: SubschemaType, subschemaType?: SchemaType) => Promise<any>;
 	onUnknownField?: (field: string, value: any) => Promise<any>;
 	postField?: (field: string, value: any, subschema?: SubschemaType, subschemaType?: SchemaType) => Promise<any>;
+};
+
+export type XTransformHandlerResult = undefined | {
+	set?: any;
+	stop?: boolean;
+	delete?: boolean;
+};
+export type XTransformHandlers = {
+	onField?: (p: ObjectSchemaPositionInfo) => XTransformHandlerResult;
+	postField?: (p: ObjectSchemaPositionInfo) => XTransformHandlerResult;
+	onUnknownField?: (p: ObjectSchemaPositionInfo) => XTransformHandlerResult;
 };
 
 export interface ValidatorConstructor {
@@ -153,6 +201,57 @@ export class Schema {
 		if (result !== false) {
 			subschemaType.traverseSchema(subschema, path, rawPath, handlers, this, options);
 		}
+	}
+
+	/**
+	 * Heavy-weight schema traverse function.  Slower, but provides more info.
+	 */
+	xtraverseSchema(handlers: XSchemaTraverseHandlers, options: SchemaTraverseOptions = {}) {
+		this._xtraverseSubschema({
+			fieldPath: '',
+			fieldParts: [],
+			schemaFieldPath: '',
+			schemaFieldParts: [],
+			subschema: this._schemaData,
+			schemaType: this._getType(this._schemaData.type),
+			schema: this,
+			stack: [],
+			extraData: options.extraData
+		}, handlers, options);
+	}
+
+	_xtraverseSubschema(p: SchemaPositionInfo, handlers: XSchemaTraverseHandlers, options: SchemaTraverseOptions): void {
+		let result: boolean | undefined = undefined;
+		if (handlers.onSubschema) {
+			result = handlers.onSubschema(p);
+		}
+		if (result !== false) {
+			if (p.schemaType) {
+				p.schemaType.xtraverseSchema(p, handlers, options);
+			}
+		}
+	}
+
+	/**
+	 * Generate a new SchemaPositionInfo that corresponds to a subschema of the current subschema.
+	 */
+	appendSchemaPositionInfo(
+		p: SchemaPositionInfo,
+		subfieldPathParts: string[],
+		subschemaPathParts: string[],
+		subschema: SubschemaType | undefined
+	): SchemaPositionInfo {
+		return {
+			fieldPath: Schema.appendFieldPath(p.fieldPath || '', subfieldPathParts.join('.')),
+			fieldParts: (p.fieldParts || []).concat(subfieldPathParts),
+			schemaFieldPath: Schema.appendFieldPath(p.schemaFieldPath || '', subschemaPathParts.join('.')),
+			schemaFieldParts: (p.schemaFieldParts || []).concat(subschemaPathParts),
+			subschema: subschema,
+			schemaType: subschema && subschema.type && this._getType(subschema.type),
+			schema: p.schema,
+			stack: p.stack.concat([ p ]),
+			extraData: p.extraData
+		};
 	}
 
 	/**
@@ -289,6 +388,37 @@ export class Schema {
 		return this._getObjPathSubschemaValue(fieldValue, fieldSubschema, pathParts, partsIdx + 1);
 	}
 
+	xgetObjectPath(obj: any, path: string | string[]): any | undefined {
+		return this._xgetObjPathSubschemaValue({
+			value: obj,
+			root: obj,
+			fieldPath: '',
+			fieldParts: [],
+			schemaFieldPath: '',
+			schemaFieldParts: [],
+			subschema: this._schemaData,
+			schemaType: this._getType(this._schemaData.type),
+			schema: this,
+			stack: []
+		}, Array.isArray(path) ? path : path.split('.'), 0);
+	}
+
+	_xgetObjPathSubschemaValue(p: ObjectSchemaPositionInfo, pathParts: string[], partsIdx: number): any {
+		if (partsIdx >= pathParts.length) return p.value;
+		if (p.value === null || p.value === undefined) return undefined;
+		const part: string = pathParts[partsIdx];
+		if (!p.subschema) return p.value && p.value[part];
+		if (!p.schemaType?.xisContainer(p)) return undefined;
+		const fieldValue: any = p.schemaType.xgetValueSubfield(p, part);
+		const fieldSubschema: SubschemaType = p.schemaType.xgetFieldSubschema(p, part);
+		const fieldSubschemaPath: string = p.schemaType.xgetFieldSubschemaPath(p, part);
+		return this._xgetObjPathSubschemaValue(
+			this.appendObjPositionInfo(p, [ part ], fieldValue, fieldSubschemaPath.split('.'), fieldSubschema),
+			pathParts,
+			partsIdx + 1
+		);
+	}
+
 	setObjectPath(obj: any, path: string, newValue: any): void {
 		this._setObjPathSubschemaValue(obj, this.getData(), path.split('.'), 0, newValue);
 	}
@@ -321,6 +451,57 @@ export class Schema {
 				}
 			}
 			this._setObjPathSubschemaValue(subvalue, subsubschema, pathParts, partsIdx + 1, newValue);
+		}
+	}
+
+	xsetObjectPath(obj: any, path: string | string[], newValue: any): void {
+		this._xsetObjPathSubschemaValue({
+			value: obj,
+			root: obj,
+			fieldPath: '',
+			fieldParts: [],
+			schemaFieldPath: '',
+			schemaFieldParts: [],
+			subschema: this._schemaData,
+			schemaType: this._getType(this._schemaData.type),
+			schema: this,
+			stack: []
+		}, Array.isArray(path) ? path : path.split('.'), 0, newValue);
+	}
+
+	_xsetObjPathSubschemaValue(p: ObjectSchemaPositionInfo, pathParts: string[], partsIdx: number, newValue: any): void {
+		if (p.value === null || p.value === undefined) throw new Error('Cannot set field on undefined or null object');
+		if (partsIdx >= pathParts.length) throw new Error('Invalid path');
+		const part: string = pathParts[partsIdx];
+		if (!p.subschema) throw new Error('No subschema for object path ' + pathParts.join('.'));
+		const schemaType: SchemaType = p.schemaType;
+		if (!schemaType) throw new Error('Tried to set path at unknown subschema');
+		if (!schemaType.xisContainer(p)) throw new Error('Subschema is not container for path ' + pathParts.join('.'));
+		if (partsIdx === pathParts.length - 1) {
+			// This is last path component, need to set the value
+			schemaType.xsetValueSubfield(p, part, newValue);
+		} else {
+			// Not the last component; descend into or create container
+			let subvalue: any = schemaType.xgetValueSubfield(p, part);
+			const subsubschema = schemaType.xgetFieldSubschema(p, part);
+			if (!subsubschema) throw new Error('No subschema for object path ' + pathParts.join('.'));
+			const subschemaType: SchemaType = this._getType(subsubschema.type);
+			if (subvalue === null || subvalue === undefined) {
+				try {
+					const newContainer = subschemaType.newEmptyContainer(null, subsubschema, this);
+					schemaType.xsetValueSubfield(p, part, newContainer);
+					subvalue = newContainer;
+				} catch (e) {
+					throw new Error('Cannot create empty container for setting value ' + pathParts.join('.'));
+				}
+			}
+			const fieldSubschemaPath: string = schemaType.xgetFieldSubschemaPath(p, part);
+			this._xsetObjPathSubschemaValue(
+				this.appendObjPositionInfo(p, [ part ], subvalue, fieldSubschemaPath.split('.'), subsubschema),
+				pathParts,
+				partsIdx + 1,
+				newValue
+			);
 		}
 	}
 
@@ -465,6 +646,101 @@ export class Schema {
 			}
 		}
 		return newValue;
+	}
+
+	/**
+	 * Heavy-weight transform function.  Slower, but provides more functionality.
+	 */
+	xtransform(obj: any, handlers: XTransformHandlers, options?: { extraData?: any }): any {
+		return this._xtransformSubschemaValue({
+			value: obj,
+			root: obj,
+			fieldPath: '',
+			fieldParts: [],
+			schemaFieldPath: '',
+			schemaFieldParts: [],
+			subschema: this._schemaData,
+			schemaType: this._getType(this._schemaData.type),
+			schema: this,
+			stack: [],
+			extraData: options?.extraData
+		}, handlers);
+	}
+
+	_xtransformSubschemaValue(p: ObjectSchemaPositionInfo, handlers: XTransformHandlers): any {
+		let newValue: any = p.value;
+		if (p.subschema) {
+			const schemaType = p.schemaType ?? this._getType(p.subschema.type);
+			if (handlers.onField) {
+				const result: XTransformHandlerResult = handlers.onField(p) || {};
+				if (('set' in result && result.set === undefined) || result.delete) {
+					newValue = undefined;
+				} else if (result.set !== undefined) {
+					newValue = result.set;
+				}
+				if (result.stop) {
+					return newValue;
+				}
+			}
+			if (newValue !== null && newValue !== undefined) {
+				p.value = newValue;
+				newValue = schemaType.xtransform(p, handlers);
+			}
+			if (handlers.postField) {
+				p.value = newValue;
+				const result: XTransformHandlerResult = handlers.postField(p) || {};
+				if (('set' in result && result.set === undefined) || result.delete) {
+					newValue = undefined;
+				} else if (result.set !== undefined) {
+					newValue = result.set;
+				}
+				if (result.stop) {
+					return newValue;
+				}
+			}
+		} else if (p.value !== undefined) {
+			if (handlers.onUnknownField) {
+				p.value = newValue;
+				const result: XTransformHandlerResult = handlers.onUnknownField(p) || {};
+				if (('set' in result && result.set === undefined) || result.delete) {
+					newValue = undefined;
+				} else if (result.set !== undefined) {
+					newValue = result.set;
+				}
+			}
+		}
+		return newValue;
+	}
+
+	/**
+	 * Generate a new ObjectSchemaPositionInfo that corresponds to a subfield of the current object/subschema.
+	 */
+	appendObjPositionInfo(
+		p: ObjectSchemaPositionInfo,
+		subfieldPathParts: string[],
+		subfieldValue: any,
+		subschemaPathParts: string[],
+		subschema: SubschemaType | undefined
+	): ObjectSchemaPositionInfo {
+		return {
+			value: subfieldValue,
+			root: p.root,
+			fieldPath: Schema.appendFieldPath(p.fieldPath || '', subfieldPathParts.join('.')),
+			fieldParts: (p.fieldParts || []).concat(subfieldPathParts),
+			schemaFieldPath: Schema.appendFieldPath(p.schemaFieldPath || '', subschemaPathParts.join('.')),
+			schemaFieldParts: (p.schemaFieldParts || []).concat(subschemaPathParts),
+			subschema: subschema,
+			schemaType: subschema && subschema.type && this._getType(subschema.type),
+			schema: p.schema,
+			stack: p.stack.concat([ p ]),
+			extraData: p.extraData
+		};
+	}
+
+	static appendFieldPath(base: string, append: string): string {
+		if (!append) return base || '';
+		if (!base) return append || '';
+		return '' + base + '.' + append;
 	}
 
 	/**

@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { createSchema, Schema } from '../lib/index.js';
+import { createSchema, Schema, XTransformHandlerResult } from '../lib/index.js';
 
 describe('Schema', function() {
 	it('::isSchema', function() {
@@ -74,6 +74,7 @@ describe('Schema', function() {
 		};
 		const path = 'foo.1.bar';
 		expect(schema.getObjectPath(obj, path)).to.equal('b');
+		expect(schema.xgetObjectPath(obj, path)).to.equal('b');
 	});
 
 	it('#setObjectPath A', function() {
@@ -139,6 +140,73 @@ describe('Schema', function() {
 		};
 		schema.setObjectPath(obj, 'arr.0.foo', 'b');
 		schema.setObjectPath(obj, 'arr.1.foo', 'c');
+		expect(obj.arr[0].foo).to.equal('b');
+		expect(obj.arr[1].foo).to.equal('c');
+	});
+
+	it('#xsetObjectPath A', function() {
+		const schema = createSchema({
+			foo: {
+				bar: {
+					baz: String
+				}
+			}
+		});
+		const obj: any = {
+			foo: {
+				bar: {
+				}
+			}
+		};
+		schema.xsetObjectPath(obj, 'foo.bar.baz', 'value');
+		expect(obj.foo.bar.baz).to.equal('value');
+	});
+
+	it('#xsetObjectPath B', function() {
+		const schema = createSchema({
+			foo: {
+				bar: {
+					baz: String
+				}
+			}
+		});
+		const obj: any = {
+			foo: {
+			}
+		};
+		schema.xsetObjectPath(obj, 'foo.bar.baz', 'value');
+		expect(obj.foo.bar.baz).to.equal('value');
+	});
+
+	it('#xsetObjectPath C', function() {
+		const schema = createSchema({
+			foo: 'string'
+		});
+		const obj: any = {
+			foo: {
+			}
+		};
+		schema.xsetObjectPath(obj, 'foo', 'value');
+		expect(obj.foo).to.equal('value');
+	});
+
+	it('#xsetObjectPath D', function() {
+		const schema = createSchema({
+			arr: [
+				{
+					foo: 'string'
+				}
+			]
+		});
+		const obj: any = {
+			arr: [
+				{
+					foo: 'a'
+				}
+			]
+		};
+		schema.xsetObjectPath(obj, 'arr.0.foo', 'b');
+		schema.xsetObjectPath(obj, 'arr.1.foo', 'c');
 		expect(obj.arr[0].foo).to.equal('b');
 		expect(obj.arr[1].foo).to.equal('c');
 	});
@@ -315,5 +383,91 @@ describe('Schema', function() {
 		});
 	});
 
+	it('xtransform', function() {
+		const schema = createSchema({
+			arrayTest: [
+				{
+					stopTraverseHere: Boolean,
+					setAndStopHere: Boolean,
+					valueFoo: String,
+					subobject: {
+						valueFoo: String
+					}
+				}
+			],
+			arraysetTest: {
+				type: 'arrayset',
+				elements: {
+					myKey: String,
+					otherKey: String
+				},
+				keyField: 'myKey'
+			}
+		});
+		const obj = {
+			arrayTest: [
+				{
+					valueFoo: 'foo',
+					subobject: {
+						valueFoo: 'foo'
+					}
+				},
+				{
+					stopTraverseHere: true,
+					valueFoo: 'foo',
+					subobject: {
+						valueFoo: 'foo'
+					}
+				},
+				{
+					setAndStopHere: true,
+					valueFoo: 'foo',
+					subobject: {
+						valueFoo: 'foo'
+					}
+				}
+			],
+			arraysetTest: [
+				{
+					myKey: 'a',
+					otherKey: 'a'
+				}
+			]
+		};
+		const expected = {
+			arrayTest: [
+				{
+					valueFoo: 'bar',
+					subobject: {
+						valueFoo: 'bar'
+					}
+				},
+				{
+					stopTraverseHere: true,
+					valueFoo: 'foo',
+					subobject: {
+						valueFoo: 'foo'
+					}
+				},
+				{
+				}
+			],
+			arraysetTest: [
+				{
+					myKey: 'b',
+					otherKey: 'b'
+				}
+			]
+		};
+		const result = schema.xtransform(obj, {
+			onField(p): XTransformHandlerResult {
+				if (p.fieldPath.endsWith('valueFoo')) return { set: 'bar' };
+				if (p.value === 'a') return { set: 'b' };
+				if (p.value && p.value.stopTraverseHere) return { stop: true };
+				if (p.value && p.value.setAndStopHere) return { set: {}, stop: true };
+				return p.value;
+			}
+		});
+	});
 
 });
